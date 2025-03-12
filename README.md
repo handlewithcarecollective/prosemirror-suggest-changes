@@ -3,6 +3,9 @@
 Check out
 [the demo](https://handlewithcarecollective.github.io/prosemirror-suggest-changes)!
 
+Development of this library is sponsored by the kind folks at
+[dskrpt.de](https://dskrpt.de/)!
+
 ## Installation
 
 Install `@handlewithcare/prosemirror-suggest-changes` and its peer dependencies:
