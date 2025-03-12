@@ -1,7 +1,6 @@
 import { type Node } from "prosemirror-model";
 import {
   type EditorState,
-  NodeSelection,
   TextSelection,
   type Transaction,
 } from "prosemirror-state";
@@ -97,7 +96,9 @@ export function suggestReplaceStep(
         from: Math.max(pos, stepFrom),
         to: Math.min(pos + node.nodeSize, step.to),
       });
+      return false;
     }
+    return true;
   });
 
   // Delete the previously-inserted ranges for real
@@ -155,33 +156,64 @@ export function suggestReplaceStep(
     }
 
     if ($stepTo.nodeAfter?.text?.startsWith("\u200B")) {
-      trackedTransaction.delete(stepFrom - 1, stepFrom);
+      trackedTransaction.delete(stepTo, stepTo + 1);
+    }
+
+    // TODO: Handle a user pressing the (forward) delete key
+    // at the very beginning of a text node that starts
+    // with a zero-width space
+
+    // If the user is deleting exactly a zero-width space,
+    // delete the space and also shift the range back by one,
+    // so that they actually mark the character before the
+    // zero-width space as deleted. The user doesn't know
+    // the zero-width space is there, so deleting it would
+    // appear to do nothing
+    if (
+      $stepFrom.nodeBefore &&
+      stepTo - stepFrom === 1 &&
+      trackedTransaction.doc.textBetween(stepFrom, stepTo) === "\u200B"
+    ) {
+      trackedTransaction.delete(stepFrom, stepTo);
+      stepFrom--;
+      stepTo--;
+      $stepFrom = trackedTransaction.doc.resolve(stepFrom);
+      $stepTo = trackedTransaction.doc.resolve(stepTo);
+      trackedTransaction.setSelection(TextSelection.near($stepFrom));
     }
   }
 
-  try {
-    // TODO: This probably isn't the best way to do this
-    //
-    // Determine whether we've deleted precisely one node. If we have,
-    // then add a node mark instead of an inline mark.
-    const nodeSelection = NodeSelection.create(
-      trackedTransaction.doc,
-      stepFrom,
-    );
-    if (nodeSelection.to === stepTo) {
-      trackedTransaction.addNodeMark(stepFrom, deletion.create({ id: markId }));
-    } else {
-      trackedTransaction.addMark(
-        stepFrom,
-        stepTo,
-        deletion.create({ id: markId }),
-      );
-    }
-  } catch {
+  // TODO: Even if the range doesn't map to a block
+  // range, check whether it contains any whole
+  // blocks, so that we can use node marks on those.
+  //
+  // If the deleted range maps precisely to a block
+  // range. If they do, add node marks to the nodes
+  // in the range, rather than using inline marks
+  // on the content.
+  const blockRange = trackedTransaction.doc
+    .resolve(stepFrom)
+    .blockRange(trackedTransaction.doc.resolve(stepTo));
+
+  if (
+    !blockRange ||
+    blockRange.start !== stepFrom ||
+    blockRange.end !== stepTo
+  ) {
     trackedTransaction.addMark(
       stepFrom,
       stepTo,
       deletion.create({ id: markId }),
+    );
+  } else {
+    trackedTransaction.doc.nodesBetween(
+      blockRange.start,
+      blockRange.end,
+      (_, pos) => {
+        if (pos < blockRange.start) return true;
+        trackedTransaction.addNodeMark(pos, deletion.create({ id: markId }));
+        return false;
+      },
     );
   }
 

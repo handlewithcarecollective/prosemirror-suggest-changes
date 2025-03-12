@@ -12,6 +12,7 @@ export const deletion: MarkSpec = {
       {
         "data-id": String(mark.attrs["id"]),
         "data-inline": String(inline),
+        ...(!inline && { style: "display: block" }),
       },
       0,
     ];
@@ -41,6 +42,7 @@ export const insertion: MarkSpec = {
       {
         "data-id": String(mark.attrs["id"]),
         "data-inline": String(inline),
+        ...(!inline && { style: "display: block" }),
       },
       0,
     ];

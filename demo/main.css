@@ -12,14 +12,16 @@
   max-width: 700px;
 }
 
-ins {
-  background-color: #7aea9f;
+ins,
+[data-node-insertion] {
+  background-color: #baffdf;
   color: #00973c;
 }
 
-del {
+del,
+[data-node-deletion] {
   color: #9f003e;
-  background-color: #ec779c;
+  background-color: #ffb7dc;
 }
 
 .menu {

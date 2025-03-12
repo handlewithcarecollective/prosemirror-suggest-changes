@@ -23,9 +23,14 @@ export function findSuggestionMarkEnd($pos: ResolvedPos, markType: MarkType) {
     // We're at the end of a node. We need to check
     // whether there's a matching deletion at the beginning
     // of the next node
-    const afterParentPos = $afterPos.after();
-    const $afterParentPos = $pos.doc.resolve(afterParentPos);
-    const nextParent = $afterParentPos.nodeAfter;
+    let afterParentPos = $afterPos.after();
+    let $afterParentPos = $pos.doc.resolve(afterParentPos);
+    let nextParent = $afterParentPos.nodeAfter;
+    while ($afterParentPos.depth > 0 && !nextParent) {
+      afterParentPos = $afterPos.after($afterParentPos.depth);
+      $afterParentPos = $pos.doc.resolve(afterParentPos);
+      nextParent = $afterParentPos.nodeAfter;
+    }
 
     let cousinStartPos = afterParentPos + 1;
     let cousin = nextParent?.firstChild;

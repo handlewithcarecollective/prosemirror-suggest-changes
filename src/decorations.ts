@@ -26,9 +26,10 @@ export function getSuggestionDecorations(state: EditorState): DecorationSource {
   }
 
   const changeDecorations: Decoration[] = [];
+  let lastParentNode: Node | null = null;
   let lastTextNode: Node | null = null;
   let lastTextNodeEndPos = 0;
-  state.doc.descendants((node, pos) => {
+  state.doc.descendants((node, pos, parent) => {
     if (node.isTextblock && node.childCount) {
       if (node.children.every((child) => deletion.isInSet(child.marks))) {
         changeDecorations.push(
@@ -62,11 +63,20 @@ export function getSuggestionDecorations(state: EditorState): DecorationSource {
     const widgetPos = lastTextNodeEndPos;
     lastTextNode = node;
     lastTextNodeEndPos = pos + node.nodeSize;
+    if (parent === lastParentNode) {
+      lastParentNode = parent;
+      return true;
+    }
+    lastParentNode = parent;
     if (
-      ((!currentDeletionMark || !lastDeletionMark) &&
-        (!currentInsertionMark || !lastInsertionMark)) ||
-      (currentDeletionMark?.attrs["id"] !== lastDeletionMark?.attrs["id"] &&
-        currentInsertionMark?.attrs["id"] !== lastInsertionMark?.attrs["id"])
+      (!currentDeletionMark || !lastDeletionMark) &&
+      (!currentInsertionMark || !lastInsertionMark)
+    ) {
+      return true;
+    }
+    if (
+      currentDeletionMark?.attrs["id"] !== lastDeletionMark?.attrs["id"] &&
+      currentInsertionMark?.attrs["id"] !== lastInsertionMark?.attrs["id"]
     ) {
       return true;
     }
