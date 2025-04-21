@@ -223,6 +223,5 @@ export function withSuggestChanges(
         ? transformToSuggestionTransaction(tr, this.state)
         : tr;
     dispatch.call(this, transaction);
-    console.log(this.state);
   };
 }
