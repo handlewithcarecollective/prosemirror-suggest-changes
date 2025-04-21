@@ -51,6 +51,8 @@ export function suggestReplaceAroundStep(
     // handle node type changes
     if (newNode.type.name !== oldNode.type.name) {
       // type changed
+
+      // Code below is similar to trackAttrStep()
       const rebasedPos = rebasePos(
         step.from,
         prevSteps,
