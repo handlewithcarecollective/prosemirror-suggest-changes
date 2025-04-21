@@ -38,6 +38,24 @@ describe("applyTrackedChanges", () => {
         testBuilders.insertion({ id: 2 }, "undo"),
         " paragraph",
       ),
+      testBuilders.modification(
+        {
+          id: 4,
+          type: "nodeType",
+          previousValue: "paragraph",
+          newValue: "heading",
+        },
+        testBuilders.modification(
+          {
+            id: 4,
+            type: "attr",
+            attrName: "level",
+            previousValue: 1,
+            newValue: 2,
+          },
+          testBuilders.heading({ level: 2 }, "third paragraph"),
+        ),
+      ),
     );
 
     const editorState = EditorState.create({
@@ -54,6 +72,7 @@ describe("applyTrackedChanges", () => {
       testBuilders.paragraph("fire paragraph"),
       testBuilders.image({ src: "https://dskrpt.de/test-image-2" }),
       testBuilders.paragraph("secundo paragraph"),
+      testBuilders.heading({ level: 2 }, "third paragraph"),
     );
 
     assert(
@@ -164,6 +183,24 @@ describe("revertTrackedChanges", () => {
         testBuilders.insertion({ id: 2 }, "undo"),
         " paragraph",
       ),
+      testBuilders.modification(
+        {
+          id: 4,
+          type: "nodeType",
+          previousValue: "paragraph",
+          newValue: "heading",
+        },
+        testBuilders.modification(
+          {
+            id: 4,
+            type: "attr",
+            attrName: "level",
+            previousValue: 1,
+            newValue: 2,
+          },
+          testBuilders.heading({ level: 2 }, "third paragraph"),
+        ),
+      ),
     );
 
     const editorState = EditorState.create({
@@ -180,6 +217,7 @@ describe("revertTrackedChanges", () => {
       testBuilders.paragraph("first paragraph"),
       testBuilders.image({ src: "https://dskrpt.de/test-image" }),
       testBuilders.paragraph("second paragraph"),
+      testBuilders.paragraph("third paragraph"),
     );
 
     assert(

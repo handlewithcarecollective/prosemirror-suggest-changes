@@ -1,13 +1,16 @@
 import { type Node } from "prosemirror-model";
 import { type EditorState, type Transaction } from "prosemirror-state";
 import {
+  AttrStep,
   type ReplaceAroundStep,
   type ReplaceStep,
   type Step,
   replaceStep,
 } from "prosemirror-transform";
 
+import { trackAttrStep } from "./attrStep.js";
 import { applySuggestionsToSlice } from "./commands.js";
+import { rebasePos } from "./rebasePos.js";
 import { suggestReplaceStep } from "./replaceStep.js";
 
 /**
@@ -25,6 +28,81 @@ export function suggestReplaceAroundStep(
   prevSteps: Step[],
   suggestionId: number,
 ) {
+  // This detects and handles changes from `setNodeMarkup`
+  // (https://github.com/handlewithcarecollective/prosemirror-suggest-changes/issues/7)
+  if (
+    step.insert === 1 &&
+    step.from === 0 &&
+    step.slice.size === 2 &&
+    step.gapTo === step.to - 1 &&
+    step.gapFrom === step.from + 1 &&
+    (step as any).structure === true
+  ) {
+    const { modification } = state.schema.marks;
+    if (!modification) {
+      throw new Error(
+        `Failed to apply modifications to node: schema does not contain modification mark. Did you forget to add it?`,
+      );
+    }
+
+    const newNode = step.slice.content.firstChild!;
+    const oldNode = doc.resolve(step.from).nodeAfter!;
+
+    // handle node type changes
+    if (newNode.type.name !== oldNode.type.name) {
+      // type changed
+      const rebasedPos = rebasePos(
+        step.from,
+        prevSteps,
+        trackedTransaction.steps,
+      );
+      const $pos = trackedTransaction.doc.resolve(rebasedPos);
+      const node = $pos.nodeAfter;
+      let marks = node?.marks ?? [];
+      const existingMod = marks.find(
+        (mark) =>
+          mark.type === modification && mark.attrs["type"] === "nodeType",
+      );
+      if (existingMod) {
+        marks = existingMod.removeFromSet(marks);
+      }
+      marks = modification
+        .create({
+          id: suggestionId,
+          type: "nodeType",
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          previousValue: node?.type.name,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          newValue: step.slice.content.firstChild?.type.name,
+        })
+        .addToSet(marks);
+
+      trackedTransaction.setNodeMarkup(rebasedPos, newNode.type, null, marks);
+    }
+
+    // handle attribute changes
+    const attrNames = new Set([
+      ...Object.keys(newNode.attrs),
+      ...Object.keys(oldNode.attrs),
+    ]);
+    for (const attr of attrNames) {
+      if (newNode.attrs[attr] !== oldNode.attrs[attr]) {
+        // delegate to trackAttrStep to handle the attribute change
+        trackAttrStep(
+          trackedTransaction,
+          state,
+          doc,
+          new AttrStep(step.from, attr, newNode.attrs[attr]),
+          prevSteps,
+          suggestionId,
+        );
+      }
+    }
+
+    // TODO: also handle mark changes?
+    return true;
+  }
+
   const applied = step.apply(doc).doc;
   if (!applied) return false;
   const from = step.getMap().map(step.from, -1);
