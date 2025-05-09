@@ -147,7 +147,10 @@ export function suggestReplaceStep(
     // that space. We'll join the marks later, and can use
     // the joined marks to find deletions across the block
     // boundary
-    if ($stepFrom.nodeBefore?.text?.endsWith("\u200B")) {
+    if (
+      $stepFrom.nodeBefore?.text?.endsWith("\u200B") &&
+      !$stepTo.nodeAfter?.text?.startsWith("\u200B")
+    ) {
       trackedTransaction.delete(stepFrom - 1, stepFrom);
       stepFrom--;
       stepTo--;
@@ -155,13 +158,12 @@ export function suggestReplaceStep(
       $stepTo = trackedTransaction.doc.resolve(stepTo);
     }
 
-    if ($stepTo.nodeAfter?.text?.startsWith("\u200B")) {
+    if (
+      $stepTo.nodeAfter?.text?.startsWith("\u200B") &&
+      !$stepFrom.nodeBefore?.text?.endsWith("\u200B")
+    ) {
       trackedTransaction.delete(stepTo, stepTo + 1);
     }
-
-    // TODO: Handle a user pressing the (forward) delete key
-    // at the very beginning of a text node that starts
-    // with a zero-width space
 
     // If the user is deleting exactly a zero-width space,
     // delete the space and also shift the range back by one,
