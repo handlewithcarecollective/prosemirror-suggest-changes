@@ -44,8 +44,14 @@ export function suggestReplaceAroundStep(
       );
     }
 
-    const newNode = step.slice.content.firstChild!;
-    const oldNode = doc.resolve(step.from).nodeAfter!;
+    const newNode = step.slice.content.firstChild;
+    const oldNode = doc.resolve(step.from).nodeAfter;
+
+    if (!newNode || !oldNode) {
+      throw new Error(
+        "Failed to apply modifications to node: unexpected ReplaceAroundStep as oldNode / newNode is null",
+      );
+    }
 
     if (newNode.type.name !== oldNode.type.name) {
       // Code below is similar to trackAttrStep()
@@ -74,7 +80,7 @@ export function suggestReplaceAroundStep(
           id: suggestionId,
           type: "nodeType",
           previousValue: node.type.name,
-          newValue: step.slice.content.firstChild?.type.name,
+          newValue: newNode.type.name,
         })
         .addToSet(marks);
 
