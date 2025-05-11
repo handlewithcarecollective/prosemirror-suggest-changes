@@ -105,6 +105,7 @@ function suggestSetNodeMarkup(
     // TODO: also handle mark changes?
     return true;
   }
+  return false;
 }
 
 /**
