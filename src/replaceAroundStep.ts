@@ -14,13 +14,11 @@ import { rebasePos } from "./rebasePos.js";
 import { suggestReplaceStep } from "./replaceStep.js";
 
 /**
- * Transform a replace around step into its equivalent tracked steps.
- *
- * Replace around steps are treated as replace steps in this model. An
- * equivalent replace step will be generated, and then processed via
- * trackReplaceStep().
+ * This detects and handles changes from `setNodeMarkup` so that these are tracked as a modification
+ * instead of a deletion + insertion
+ * (https://github.com/handlewithcarecollective/prosemirror-suggest-changes/issues/7)
  */
-export function suggestReplaceAroundStep(
+function suggestSetNodeMarkup(
   trackedTransaction: Transaction,
   state: EditorState,
   doc: Node,
@@ -28,8 +26,6 @@ export function suggestReplaceAroundStep(
   prevSteps: Step[],
   suggestionId: number,
 ) {
-  // This detects and handles changes from `setNodeMarkup`
-  // (https://github.com/handlewithcarecollective/prosemirror-suggest-changes/issues/7)
   if (
     step.insert === 1 &&
     step.slice.size === 2 &&
@@ -107,6 +103,35 @@ export function suggestReplaceAroundStep(
     }
 
     // TODO: also handle mark changes?
+    return true;
+  }
+}
+
+/**
+ * Transform a replace around step into its equivalent tracked steps.
+ *
+ * Replace around steps are treated as replace steps in this model. An
+ * equivalent replace step will be generated, and then processed via
+ * trackReplaceStep().
+ */
+export function suggestReplaceAroundStep(
+  trackedTransaction: Transaction,
+  state: EditorState,
+  doc: Node,
+  step: ReplaceAroundStep,
+  prevSteps: Step[],
+  suggestionId: number,
+) {
+  const handled = suggestSetNodeMarkup(
+    trackedTransaction,
+    state,
+    doc,
+    step,
+    prevSteps,
+    suggestionId,
+  );
+
+  if (handled) {
     return true;
   }
 
