@@ -44,7 +44,7 @@ describe("ReplaceAroundStep", () => {
           id: 1,
           type: "attr",
           attrName: "level",
-          previousValue: 1, // TBD: previousValue should be 1 (default value), or undefined?
+          previousValue: 1,
           newValue: 2,
         },
         testBuilders.modification(

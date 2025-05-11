@@ -36,7 +36,7 @@ export function suggestReplaceAroundStep(
     step.slice.size === 2 &&
     step.gapTo === step.to - 1 &&
     step.gapFrom === step.from + 1 &&
-    (step as any).structure === true
+    (step as ReplaceAroundStep & { structure: boolean }).structure
   ) {
     const { modification } = state.schema.marks;
     if (!modification) {
@@ -48,10 +48,7 @@ export function suggestReplaceAroundStep(
     const newNode = step.slice.content.firstChild!;
     const oldNode = doc.resolve(step.from).nodeAfter!;
 
-    // handle node type changes
     if (newNode.type.name !== oldNode.type.name) {
-      // type changed
-
       // Code below is similar to trackAttrStep()
       const rebasedPos = rebasePos(
         step.from,
@@ -60,7 +57,12 @@ export function suggestReplaceAroundStep(
       );
       const $pos = trackedTransaction.doc.resolve(rebasedPos);
       const node = $pos.nodeAfter;
-      let marks = node?.marks ?? [];
+
+      if (!node) {
+        throw new Error("Failed to apply modifications to node: no node found");
+      }
+
+      let marks = node.marks;
       const existingMod = marks.find(
         (mark) =>
           mark.type === modification && mark.attrs["type"] === "nodeType",
@@ -72,9 +74,7 @@ export function suggestReplaceAroundStep(
         .create({
           id: suggestionId,
           type: "nodeType",
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          previousValue: node?.type.name,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          previousValue: node.type.name,
           newValue: step.slice.content.firstChild?.type.name,
         })
         .addToSet(marks);
