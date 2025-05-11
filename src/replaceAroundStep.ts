@@ -32,7 +32,6 @@ export function suggestReplaceAroundStep(
   // (https://github.com/handlewithcarecollective/prosemirror-suggest-changes/issues/7)
   if (
     step.insert === 1 &&
-    step.from === 0 &&
     step.slice.size === 2 &&
     step.gapTo === step.to - 1 &&
     step.gapFrom === step.from + 1 &&

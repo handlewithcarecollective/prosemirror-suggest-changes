@@ -23,7 +23,9 @@ describe("ReplaceAroundStep", () => {
 
     const originalTransaction = editorState.tr;
 
-    originalTransaction.setNodeMarkup(0, testBuilders.schema.nodes.heading, {
+    const pos = originalTransaction.doc.children[0]!.nodeSize;
+
+    originalTransaction.setNodeMarkup(pos, testBuilders.schema.nodes.heading, {
       level: 2,
     });
 
@@ -39,6 +41,7 @@ describe("ReplaceAroundStep", () => {
     const trackedState = editorState.apply(trackedTransaction);
 
     const expected = testBuilders.doc(
+      testBuilders.paragraph("first paragraph"),
       testBuilders.modification(
         {
           id: 1,
@@ -54,10 +57,9 @@ describe("ReplaceAroundStep", () => {
             previousValue: "paragraph",
             newValue: "heading",
           },
-          testBuilders.heading({ level: 2 }, "first paragraph"),
+          testBuilders.heading({ level: 2 }, "second paragraph"),
         ),
       ),
-      testBuilders.paragraph("second paragraph"),
     );
 
     assert(
