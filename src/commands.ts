@@ -111,7 +111,7 @@ function revertModifications(node: Node, pos: number, tr: Transform) {
     } else if (mod.attrs["type"] === "nodeType") {
       tr.setNodeMarkup(
         pos,
-        node.type.schema.nodes[mod.attrs["previousValue"]],
+        node.type.schema.nodes[mod.attrs["previousValue"] as string],
         null,
       );
     } else {
