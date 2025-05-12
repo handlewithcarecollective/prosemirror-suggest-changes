@@ -1,16 +1,20 @@
 import { type Node } from "prosemirror-model";
 import { type EditorState, type Transaction } from "prosemirror-state";
 import {
+  AddNodeMarkStep,
   AttrStep,
+  RemoveNodeMarkStep,
   type ReplaceAroundStep,
   type ReplaceStep,
   type Step,
   replaceStep,
 } from "prosemirror-transform";
 
+import { trackAddNodeMarkStep } from "./addNodeMarkStep.js";
 import { trackAttrStep } from "./attrStep.js";
 import { applySuggestionsToSlice } from "./commands.js";
 import { rebasePos } from "./rebasePos.js";
+import { suggestRemoveNodeMarkStep } from "./removeNodeMarkStep.js";
 import { suggestReplaceStep } from "./replaceStep.js";
 
 /**
@@ -41,13 +45,56 @@ function suggestSetNodeMarkup(
     }
 
     const newNode = step.slice.content.firstChild;
-    const oldNode = doc.resolve(step.from).nodeAfter;
+    let oldNode = trackedTransaction.doc.resolve(step.from).nodeAfter;
 
     if (!newNode || !oldNode) {
       throw new Error(
         "Failed to apply modifications to node: unexpected ReplaceAroundStep as oldNode / newNode is null",
       );
     }
+
+    const addedMarks = newNode.marks.filter(
+      (m) => !oldNode?.marks.some((m2) => m2.eq(m)),
+    );
+
+    addedMarks.forEach((mark) => {
+      if (mark.type === modification) {
+        return;
+      }
+      trackAddNodeMarkStep(
+        trackedTransaction,
+        state,
+        doc,
+        new AddNodeMarkStep(step.from, mark),
+        prevSteps,
+        suggestionId,
+      );
+    });
+
+    oldNode = trackedTransaction.doc.resolve(step.from).nodeAfter;
+    if (!oldNode) {
+      throw new Error(
+        "Failed to apply modifications to node: unexpected ReplaceAroundStep as oldNode is null",
+      );
+    }
+
+    const removedMarks = oldNode.marks.filter(
+      (m) => !newNode.marks.some((m2) => m2.eq(m)),
+    );
+
+    removedMarks.forEach((mark) => {
+      if (mark.type === modification) {
+        return;
+      }
+      suggestRemoveNodeMarkStep(
+        trackedTransaction,
+        state,
+        doc,
+        new RemoveNodeMarkStep(step.from, mark),
+        prevSteps,
+        suggestionId,
+      );
+    });
 
     if (newNode.type.name !== oldNode.type.name) {
       // Code below is similar to trackAttrStep()
@@ -102,7 +149,6 @@ function suggestSetNodeMarkup(
       }
     }
 
-    // TODO: also handle mark changes?
     return true;
   }
   return false;

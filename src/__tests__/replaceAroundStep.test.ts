@@ -68,6 +68,250 @@ describe("ReplaceAroundStep", () => {
     );
   });
 
+  describe("remove node marks via setNodeMarkup", () => {
+    // These tests are copied from RemoveNodeMarkStep test,
+    // but modified to use setNodeMarkup
+    it("should add a modification mark", () => {
+      const doc = testBuilders.doc(
+        testBuilders.difficulty(
+          { level: "beginner" },
+          testBuilders.paragraph("first paragraph"),
+        ),
+        testBuilders.paragraph("second paragraph"),
+      ) as TaggedNode;
+
+      const editorState = EditorState.create({
+        doc,
+        selection: TextSelection.atStart(doc),
+      });
+
+      const originalTransaction = editorState.tr;
+
+      originalTransaction.setNodeMarkup(0, undefined, undefined, []);
+
+      const step = originalTransaction.steps[0];
+      assert(
+        step instanceof ReplaceAroundStep,
+        "Could not create test RemoveNodeMark",
+      );
+
+      const trackedTransaction = editorState.tr;
+      suggestReplaceAroundStep(
+        trackedTransaction,
+        editorState,
+        doc,
+        step,
+        [],
+        1,
+      );
+
+      const trackedState = editorState.apply(trackedTransaction);
+
+      const expected = testBuilders.doc(
+        testBuilders.modification(
+          {
+            id: 1,
+            type: "mark",
+            // we know this mark exists
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            previousValue: doc.children[0]!.marks[0]!.toJSON(),
+            newValue: null,
+          },
+          testBuilders.paragraph("first paragraph"),
+        ),
+        testBuilders.paragraph("second paragraph"),
+      );
+
+      assert(
+        eq(trackedState.doc, expected),
+        `Expected ${trackedState.doc} to match ${expected}`,
+      );
+    });
+
+    it("should remove already-modified marks", () => {
+      const doc = testBuilders.doc(
+        testBuilders.modification(
+          {
+            id: 1,
+            type: "mark",
+            previousValue: null,
+            newValue: testBuilders.schema.marks.difficulty
+              .create({
+                level: "beginner",
+              })
+              .toJSON(),
+          },
+          testBuilders.difficulty(
+            { level: "beginner" },
+            testBuilders.paragraph("first paragraph"),
+          ),
+        ),
+        testBuilders.paragraph("second paragraph"),
+      ) as TaggedNode;
+
+      const editorState = EditorState.create({
+        doc,
+        selection: TextSelection.atStart(doc),
+      });
+
+      const originalTransaction = editorState.tr;
+
+      originalTransaction.setNodeMarkup(0, undefined, undefined, []);
+
+      const step = originalTransaction.steps[0];
+      assert(
+        step instanceof ReplaceAroundStep,
+        "Could not create test RemoveNodeMark",
+      );
+
+      const trackedTransaction = editorState.tr;
+      suggestReplaceAroundStep(
+        trackedTransaction,
+        editorState,
+        doc,
+        step,
+        [],
+        1,
+      );
+
+      const trackedState = editorState.apply(trackedTransaction);
+
+      const expected = testBuilders.doc(
+        testBuilders.paragraph("first paragraph"),
+        testBuilders.paragraph("second paragraph"),
+      );
+
+      assert(
+        eq(trackedState.doc, expected),
+        `Expected ${trackedState.doc} to match ${expected}`,
+      );
+    });
+  });
+
+  describe("add node marks via setNodeMarkup", () => {
+    // These tests are copied from AddNodeMarkStep test,
+    // but modified to use setNodeMarkup
+    it("should add a modification mark", () => {
+      const doc = testBuilders.doc(
+        testBuilders.paragraph("first paragraph"),
+        testBuilders.paragraph("second paragraph"),
+      ) as TaggedNode;
+
+      const editorState = EditorState.create({
+        doc,
+        selection: TextSelection.atStart(doc),
+      });
+
+      const originalTransaction = editorState.tr;
+
+      const markToAdd = testBuilders.schema.marks.difficulty.create({
+        level: "beginner",
+      });
+      originalTransaction.setNodeMarkup(0, undefined, undefined, [markToAdd]);
+      const step = originalTransaction.steps[0];
+      assert(
+        step instanceof ReplaceAroundStep,
+        "Could not create test setNodeMarkup",
+      );
+
+      const trackedTransaction = editorState.tr;
+      suggestReplaceAroundStep(
+        trackedTransaction,
+        editorState,
+        doc,
+        step,
+        [],
+        1,
+      );
+
+      const trackedState = editorState.apply(trackedTransaction);
+
+      const expected = testBuilders.doc(
+        testBuilders.modification(
+          {
+            id: 1,
+            type: "mark",
+            previousValue: null,
+            newValue: markToAdd.toJSON(),
+          },
+          testBuilders.difficulty(
+            { level: "beginner" },
+            testBuilders.paragraph("first paragraph"),
+          ),
+        ),
+        testBuilders.paragraph("second paragraph"),
+      );
+
+      assert(
+        eq(trackedState.doc, expected),
+        `Expected ${trackedState.doc} to match ${expected}`,
+      );
+    });
+
+    it("should replace incompatible marks", () => {
+      const doc = testBuilders.doc(
+        testBuilders.difficulty(
+          { level: "beginner" },
+          testBuilders.paragraph("first paragraph"),
+        ),
+        testBuilders.paragraph("second paragraph"),
+      ) as TaggedNode;
+
+      const editorState = EditorState.create({
+        doc,
+        selection: TextSelection.atStart(doc),
+      });
+
+      const originalTransaction = editorState.tr;
+
+      const markToAdd = testBuilders.schema.marks.difficulty.create({
+        level: "advanced",
+      });
+
+      originalTransaction.setNodeMarkup(0, undefined, undefined, [markToAdd]);
+      const step = originalTransaction.steps[0];
+      assert(
+        step instanceof ReplaceAroundStep,
+        "Could not create test AddNodeMarkStep",
+      );
+
+      const trackedTransaction = editorState.tr;
+      suggestReplaceAroundStep(
+        trackedTransaction,
+        editorState,
+        doc,
+        step,
+        [],
+        1,
+      );
+
+      const trackedState = editorState.apply(trackedTransaction);
+
+      const expected = testBuilders.doc(
+        testBuilders.modification(
+          {
+            id: 1,
+            type: "mark",
+            previousValue: testBuilders.schema.marks.difficulty
+              .create({ level: "beginner" })
+              .toJSON(),
+            newValue: markToAdd.toJSON(),
+          },
+          testBuilders.difficulty(
+            { level: "advanced" },
+            testBuilders.paragraph("first paragraph"),
+          ),
+        ),
+        testBuilders.paragraph("second paragraph"),
+      );
+
+      assert(
+        eq(trackedState.doc, expected),
+        `Expected ${trackedState.doc} to match ${expected}`,
+      );
+    });
+  });
+
   it("should treat a replace around as a standard replace", () => {
     const doc = testBuilders.doc(
       testBuilders.paragraph("<a>first paragraph<b>"),
