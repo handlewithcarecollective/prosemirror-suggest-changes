@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 import { EditorState, TextSelection } from "prosemirror-state";
 import { eq } from "prosemirror-test-builder";
 import { ReplaceAroundStep, findWrapping } from "prosemirror-transform";
