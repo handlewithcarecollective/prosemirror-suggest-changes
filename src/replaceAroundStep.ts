@@ -130,7 +130,6 @@ function suggestSetNodeMarkup(
       trackedTransaction.setNodeMarkup(rebasedPos, newNode.type, null, marks);
     }
 
-    // handle attribute changes
     const attrNames = new Set([
       ...Object.keys(newNode.attrs),
       ...Object.keys(oldNode.attrs),
