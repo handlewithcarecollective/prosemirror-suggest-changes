@@ -84,7 +84,9 @@ export function suggestReplaceStep(
   let stepTo = rebasePos(step.to, prevSteps, trackedTransaction.steps);
 
   if (state.selection.empty && stepFrom !== stepTo) {
-    trackedTransaction.setSelection(TextSelection.near(doc.resolve(stepFrom)));
+    trackedTransaction.setSelection(
+      TextSelection.near(trackedTransaction.doc.resolve(stepFrom)),
+    );
   }
 
   // Make a list of any existing insertions that fall within the
