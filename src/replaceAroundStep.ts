@@ -23,8 +23,8 @@ export function suggestReplaceAroundStep(
   doc: Node,
   step: ReplaceAroundStep,
   prevSteps: Step[],
-  suggestionId: number,
-) {
+  suggestionId: string,
+): boolean {
   const applied = step.apply(doc).doc;
   if (!applied) return false;
   const from = step.getMap().map(step.from, -1);

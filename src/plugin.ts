@@ -6,23 +6,41 @@ import {
 } from "prosemirror-state";
 import { getSuggestionDecorations } from "./decorations.js";
 
-export const suggestChangesKey = new PluginKey<{ enabled: boolean }>(
+export interface SuggestChangesPluginState {
+  enabled: boolean;
+  generateId: () => string;
+}
+
+export interface SuggestChangesOptions {
+  generateId?: () => string;
+}
+
+function defaultGenerateId(): string {
+  const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+  const random = Math.random().toString(36).substring(2, 6); // 4 character random string
+  return `${random}${timestamp}`;
+}
+
+export const suggestChangesKey = new PluginKey<SuggestChangesPluginState>(
   "@handlewithcare/prosemirror-suggest-changes",
 );
 
-export function suggestChanges() {
-  return new Plugin<{ enabled: boolean }>({
+export function suggestChanges(options: SuggestChangesOptions = {}) {
+  const generateId = options.generateId ?? defaultGenerateId;
+
+  return new Plugin<SuggestChangesPluginState>({
     key: suggestChangesKey,
     state: {
       init() {
-        return { enabled: false };
+        return { enabled: false, generateId };
       },
       apply(tr, value) {
         const meta = tr.getMeta(suggestChangesKey) as
           | { enabled: boolean }
           | { skip: true }
           | undefined;
-        if (meta && "enabled" in meta) return meta;
+        if (meta && "enabled" in meta)
+          return { ...value, enabled: meta.enabled };
         return value;
       },
     },
@@ -72,4 +90,12 @@ export function suggestChanges() {
 
 export function isSuggestChangesEnabled(state: EditorState) {
   return !!suggestChangesKey.getState(state)?.enabled;
+}
+
+export function getSuggestChangesGenerateId(state: EditorState): () => string {
+  const pluginState = suggestChangesKey.getState(state);
+  if (!pluginState) {
+    throw new Error("SuggestChanges plugin not found in editor state");
+  }
+  return pluginState.generateId;
 }

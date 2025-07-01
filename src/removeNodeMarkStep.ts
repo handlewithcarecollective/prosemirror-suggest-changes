@@ -16,8 +16,8 @@ export function suggestRemoveNodeMarkStep(
   _doc: Node,
   step: RemoveNodeMarkStep,
   prevSteps: Step[],
-  suggestionId: number,
-) {
+  suggestionId: string,
+): boolean {
   const { modification } = state.schema.marks;
   if (!modification) {
     throw new Error(

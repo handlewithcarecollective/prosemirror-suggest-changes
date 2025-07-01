@@ -16,8 +16,8 @@ export function trackAttrStep(
   _doc: Node,
   step: AttrStep,
   prevSteps: Step[],
-  suggestionId: number,
-) {
+  suggestionId: string,
+): boolean {
   const { modification } = state.schema.marks;
   if (!modification) {
     throw new Error(

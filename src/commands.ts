@@ -29,7 +29,7 @@ function applySuggestionsToTransform(
   tr: Transform,
   markTypeToApply: MarkType,
   markTypeToRevert: MarkType,
-  suggestionId?: number,
+  suggestionId?: string,
 ) {
   const toApplyIsInSet =
     suggestionId === undefined
@@ -119,7 +119,7 @@ function applyModificationsToTransform(
   node: Node,
   tr: Transform,
   dir: number,
-  suggestionId?: number,
+  suggestionId?: string,
 ) {
   const { modification } = node.type.schema.marks;
   if (!modification) {
@@ -227,7 +227,7 @@ export function applySuggestions(
  * The insertion mark and modification mark will be removed, and their
  * contents left in the doc.
  */
-export function applySuggestion(suggestionId: number): Command {
+export function applySuggestion(suggestionId: string): Command {
   return (state, dispatch) => {
     const { deletion, insertion } = state.schema.marks;
     if (!deletion) {
@@ -294,7 +294,7 @@ export function revertSuggestions(
  * The deletion mark will be removed, and their contents left in the doc.
  * Modifications tracked in modification marks will be reverted.
  */
-export function revertSuggestion(suggestionId: number): Command {
+export function revertSuggestion(suggestionId: string): Command {
   return (state, dispatch) => {
     const { deletion, insertion } = state.schema.marks;
     if (!deletion) {
@@ -327,7 +327,7 @@ export function revertSuggestion(suggestionId: number): Command {
 /**
  * Command that updates the selection to cover an existing change.
  */
-export function selectSuggestion(suggestionId: number): Command {
+export function selectSuggestion(suggestionId: string): Command {
   return (state, dispatch) => {
     const { deletion, insertion, modification } = state.schema.marks;
     if (!deletion) {

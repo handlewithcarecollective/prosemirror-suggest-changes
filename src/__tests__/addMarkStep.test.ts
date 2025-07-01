@@ -33,14 +33,14 @@ describe("AddMarkStep", () => {
     assert(step instanceof AddMarkStep, "Could not create test AddMarkStep");
 
     const trackedTransaction = editorState.tr;
-    trackAddMarkStep(trackedTransaction, editorState, doc, step, [], 1);
+    trackAddMarkStep(trackedTransaction, editorState, doc, step, [], "1");
 
     const trackedState = editorState.apply(trackedTransaction);
 
     const expected = testBuilders.doc(
       testBuilders.paragraph(
-        testBuilders.deletion({ id: 1 }, "first"),
-        testBuilders.insertion({ id: 1 }, testBuilders.strong("first")),
+        testBuilders.deletion({ id: "1" }, "first"),
+        testBuilders.insertion({ id: "1" }, testBuilders.strong("first")),
         " paragraph",
       ),
       testBuilders.paragraph("second paragraph"),
@@ -55,7 +55,7 @@ describe("AddMarkStep", () => {
   it("should handle overlapping deletions", () => {
     const doc = testBuilders.doc(
       testBuilders.paragraph(
-        testBuilders.deletion({ id: 1 }, "<a>fi"),
+        testBuilders.deletion({ id: "1" }, "<a>fi"),
         "rst<b> paragraph",
       ),
       testBuilders.paragraph("second paragraph"),
@@ -77,14 +77,14 @@ describe("AddMarkStep", () => {
     assert(step instanceof AddMarkStep, "Could not create test AddMarkStep");
 
     const trackedTransaction = editorState.tr;
-    trackAddMarkStep(trackedTransaction, editorState, doc, step, [], 1);
+    trackAddMarkStep(trackedTransaction, editorState, doc, step, [], "1");
 
     const trackedState = editorState.apply(trackedTransaction);
 
     const expected = testBuilders.doc(
       testBuilders.paragraph(
-        testBuilders.deletion({ id: 1 }, "first"),
-        testBuilders.insertion({ id: 1 }, testBuilders.strong("rst")),
+        testBuilders.deletion({ id: "1" }, "first"),
+        testBuilders.insertion({ id: "1" }, testBuilders.strong("rst")),
         " paragraph",
       ),
       testBuilders.paragraph("second paragraph"),

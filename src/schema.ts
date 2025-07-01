@@ -4,7 +4,7 @@ export const deletion: MarkSpec = {
   inclusive: false,
   excludes: "insertion modification deletion",
   attrs: {
-    id: { validate: "number" },
+    id: { validate: "string" },
   },
   toDOM(mark, inline) {
     return [
@@ -23,7 +23,7 @@ export const deletion: MarkSpec = {
       getAttrs(node) {
         if (!node.dataset["id"]) return false;
         return {
-          id: parseInt(node.dataset["id"], 10),
+          id: node.dataset["id"],
         };
       },
     },
@@ -34,7 +34,7 @@ export const insertion: MarkSpec = {
   inclusive: false,
   excludes: "deletion modification insertion",
   attrs: {
-    id: { validate: "number" },
+    id: { validate: "string" },
   },
   toDOM(mark, inline) {
     return [
@@ -53,7 +53,7 @@ export const insertion: MarkSpec = {
       getAttrs(node) {
         if (!node.dataset["id"]) return false;
         return {
-          id: parseInt(node.dataset["id"], 10),
+          id: node.dataset["id"],
         };
       },
     },
@@ -64,7 +64,7 @@ export const modification: MarkSpec = {
   inclusive: false,
   excludes: "deletion insertion",
   attrs: {
-    id: { validate: "number" },
+    id: { validate: "string" },
     type: { validate: "string" },
     attrName: { default: null, validate: "string|null" },
     previousValue: { default: null },
@@ -90,7 +90,7 @@ export const modification: MarkSpec = {
       getAttrs(node) {
         if (!node.dataset["id"]) return false;
         return {
-          id: parseInt(node.dataset["id"], 10),
+          id: node.dataset["id"],
           type: node.dataset["modType"],
           previousValue: node.dataset["modPrevVal"],
           newValue: node.dataset["modNewVal"],
@@ -102,7 +102,7 @@ export const modification: MarkSpec = {
       getAttrs(node) {
         if (!node.dataset["id"]) return false;
         return {
-          id: parseInt(node.dataset["id"], 10),
+          id: node.dataset["id"],
           type: node.dataset["modType"],
           previousValue: node.dataset["modPrevVal"],
         };

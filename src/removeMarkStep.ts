@@ -23,8 +23,8 @@ export function suggestRemoveMarkStep(
   doc: Node,
   step: RemoveMarkStep,
   prevSteps: Step[],
-  suggestionId: number,
-) {
+  suggestionId: string,
+): boolean {
   const applied = step.apply(doc).doc;
   if (!applied) return false;
   const slice = applied.slice(step.from, step.to);

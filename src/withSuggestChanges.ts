@@ -19,7 +19,11 @@ import { suggestRemoveNodeMarkStep } from "./removeNodeMarkStep.js";
 import { suggestReplaceAroundStep } from "./replaceAroundStep.js";
 import { suggestReplaceStep } from "./replaceStep.js";
 import { type EditorView } from "prosemirror-view";
-import { isSuggestChangesEnabled, suggestChangesKey } from "./plugin.js";
+import {
+  isSuggestChangesEnabled,
+  getSuggestChangesGenerateId,
+  suggestChangesKey,
+} from "./plugin.js";
 
 type StepHandler<S extends Step> = (
   trackedTransaction: Transaction,
@@ -27,7 +31,7 @@ type StepHandler<S extends Step> = (
   doc: Node,
   step: S,
   prevSteps: Step[],
-  suggestionId: number,
+  suggestionId: string,
 ) => boolean;
 
 function getStepHandler<S extends Step>(step: S): StepHandler<S> {
@@ -115,23 +119,8 @@ export function transformToSuggestionTransaction(
     );
   }
 
-  // Find the highest change id in the document so far,
-  // and use that as the starting point for new changes
-  let suggestionId = 0;
-  originalTransaction.docs[0]?.descendants((node) => {
-    const mark = node.marks.find(
-      (mark) =>
-        mark.type === insertion ||
-        mark.type === deletion ||
-        mark.type === modification,
-    );
-    if (mark) {
-      suggestionId = Math.max(suggestionId, mark.attrs["id"] as number);
-      return false;
-    }
-    return true;
-  });
-  suggestionId++;
+  // Get the generateId function from the plugin state
+  const generateId = getSuggestChangesGenerateId(state);
 
   // Create a new transaction from scratch. The original transaction
   // is going to be dropped in favor of this one.
@@ -145,20 +134,18 @@ export function transformToSuggestionTransaction(
     const doc = originalTransaction.docs[i]!;
 
     const stepTracker = getStepHandler(step);
-    if (
-      stepTracker(
-        trackedTransaction,
-        state,
-        doc,
-        step,
-        originalTransaction.steps.slice(0, i),
-        suggestionId,
-      )
-    ) {
-      // If the suggestionId was used by one of the step handlers,
-      // increment it so that it's not reused.
-      suggestionId++;
-    }
+
+    // Generate a new unique ID for this step
+    const suggestionId = generateId();
+
+    stepTracker(
+      trackedTransaction,
+      state,
+      doc,
+      step,
+      originalTransaction.steps.slice(0, i),
+      suggestionId,
+    );
     continue;
   }
 
