@@ -111,6 +111,14 @@ function revertModifications(node: Node, pos: number, tr: Transform) {
           node.type.schema.markFromJSON(mod.attrs["previousValue"]),
         );
       }
+    } else if (mod.attrs["type"] === "nodeType") {
+      tr.setNodeMarkup(
+        pos,
+        node.type.schema.nodes[mod.attrs["previousValue"] as string],
+        null,
+      );
+    } else {
+      throw new Error("Unknown modification type");
     }
   }
 }
@@ -137,7 +145,12 @@ function applyModificationsToTransform(
   const isModification = modificationIsInSet(node.marks);
 
   if (isModification) {
-    tr.removeNodeMark(0, modification);
+    let prevLength: number;
+    do {
+      // https://github.com/ProseMirror/prosemirror/issues/1525
+      prevLength = tr.steps.length;
+      tr.removeNodeMark(0, modification);
+    } while (tr.steps.length > prevLength);
     if (dir < 0) {
       revertModifications(node, 0, tr);
     }
@@ -149,7 +162,13 @@ function applyModificationsToTransform(
       return true;
     }
 
-    tr.removeNodeMark(pos, modification);
+    let prevLength: number;
+    do {
+      // https://github.com/ProseMirror/prosemirror/issues/1525
+      prevLength = tr.steps.length;
+      tr.removeNodeMark(pos, modification);
+    } while (tr.steps.length > prevLength);
+
     if (dir < 0) {
       revertModifications(child, pos, tr);
     }

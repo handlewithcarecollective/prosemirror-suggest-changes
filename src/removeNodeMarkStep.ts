@@ -33,6 +33,7 @@ export function suggestRemoveNodeMarkStep(
     (mark) =>
       mark.type === modification &&
       mark.attrs["type"] === "mark" &&
+      mark.attrs["newValue"] &&
       step.mark.eq(state.schema.markFromJSON(mark.attrs["newValue"])),
   );
   if (existingMod) {
