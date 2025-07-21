@@ -45,7 +45,8 @@ function suggestSetNodeMarkup(
     }
 
     const newNode = step.slice.content.firstChild;
-    let oldNode = trackedTransaction.doc.resolve(step.from).nodeAfter;
+    let from = rebasePos(step.from, prevSteps, trackedTransaction.steps);
+    let oldNode = trackedTransaction.doc.resolve(from).nodeAfter;
 
     if (!newNode || !oldNode) {
       throw new Error(
@@ -71,6 +72,7 @@ function suggestSetNodeMarkup(
       );
     });
 
+    from = rebasePos(step.from, prevSteps, trackedTransaction.steps);
     oldNode = trackedTransaction.doc.resolve(step.from).nodeAfter;
     if (!oldNode) {
       throw new Error(
