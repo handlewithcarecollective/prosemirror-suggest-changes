@@ -3,6 +3,7 @@ import { type EditorState, type Transaction } from "prosemirror-state";
 import { type AddNodeMarkStep, type Step } from "prosemirror-transform";
 
 import { rebasePos } from "./rebasePos.js";
+import { type SuggestionId } from "./generateId.js";
 
 /**
  * Transform an add node mark step into its equivalent tracked steps.
@@ -16,7 +17,7 @@ export function trackAddNodeMarkStep(
   _doc: Node,
   step: AddNodeMarkStep,
   prevSteps: Step[],
-  suggestionId: number,
+  suggestionId: SuggestionId,
 ) {
   const { modification } = state.schema.marks;
   if (!modification) {

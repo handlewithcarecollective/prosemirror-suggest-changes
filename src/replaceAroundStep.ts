@@ -16,6 +16,7 @@ import { applySuggestionsToSlice } from "./commands.js";
 import { rebasePos } from "./rebasePos.js";
 import { suggestRemoveNodeMarkStep } from "./removeNodeMarkStep.js";
 import { suggestReplaceStep } from "./replaceStep.js";
+import { type SuggestionId } from "./generateId.js";
 
 /**
  * This detects and handles changes from `setNodeMarkup` so that these are tracked as a modification
@@ -168,7 +169,7 @@ export function suggestReplaceAroundStep(
   doc: Node,
   step: ReplaceAroundStep,
   prevSteps: Step[],
-  suggestionId: number,
+  suggestionId: SuggestionId,
 ) {
   const handled = suggestSetNodeMarkup(
     trackedTransaction,

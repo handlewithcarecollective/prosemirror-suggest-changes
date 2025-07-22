@@ -3,6 +3,7 @@ import { type EditorState, type Transaction } from "prosemirror-state";
 import { type AttrStep, type Step } from "prosemirror-transform";
 
 import { rebasePos } from "./rebasePos.js";
+import { type SuggestionId } from "./generateId.js";
 
 /**
  * Transform an attr mark step into its equivalent tracked steps.
@@ -16,7 +17,7 @@ export function trackAttrStep(
   _doc: Node,
   step: AttrStep,
   prevSteps: Step[],
-  suggestionId: number,
+  suggestionId: SuggestionId,
 ) {
   const { modification } = state.schema.marks;
   if (!modification) {
