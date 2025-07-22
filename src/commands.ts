@@ -63,11 +63,22 @@ function applySuggestionsToTransform(
     if (isToRevert) {
       const { pos: deletionFrom, deleted } = tr.mapping.mapResult(pos);
       if (deleted) return false;
+
       const deletionTo = findSuggestionMarkEnd(
         tr.doc.resolve(deletionFrom + child.nodeSize),
         markTypeToRevert,
       );
-      tr.deleteRange(deletionFrom, deletionTo);
+      // check if the previous and the next text part is a space
+      // if so, we can delete the whole text part
+      const prevChar = tr.doc.textBetween(
+        deletionFrom - 1,
+        deletionFrom,
+        "x",
+        "x",
+      );
+      const nextChar = tr.doc.textBetween(deletionTo, deletionTo + 1, "x", "x");
+      const addedRange = prevChar === " " && nextChar === " " ? 1 : 0;
+      tr.deleteRange(deletionFrom, deletionTo + addedRange);
       return false;
     }
 

@@ -112,6 +112,63 @@ describe("applyTrackedChanges", () => {
       `Expected ${newState.doc} to match ${expected}`,
     );
   });
+  it("should removed doubles spaces around deletions", async () => {
+    const doc = testBuilders.doc(
+      testBuilders.paragraph(
+        "first ",
+        testBuilders.deletion({ id: "1" }, "second"),
+        " third",
+      ),
+    );
+
+    const editorState = EditorState.create({
+      doc,
+    });
+
+    const newState = await new Promise<EditorState>((resolve) => {
+      applySuggestions(editorState, (tr) => {
+        resolve(editorState.apply(tr));
+      });
+    });
+
+    const expected = testBuilders.doc(testBuilders.paragraph("first third"));
+
+    assert(
+      eq(newState.doc, expected),
+      `Expected ${newState.doc} to match ${expected}`,
+    );
+  });
+  it("should removed doubles spaces around deletions accross boundaries", async () => {
+    const doc = testBuilders.doc(
+      testBuilders.paragraph(
+        "first ",
+        testBuilders.deletion({ id: "1" }, "paragraph"),
+      ),
+      testBuilders.paragraph(
+        testBuilders.deletion({ id: "1" }, "second"),
+        " paragraph",
+      ),
+    );
+
+    const editorState = EditorState.create({
+      doc,
+    });
+
+    const newState = await new Promise<EditorState>((resolve) => {
+      applySuggestions(editorState, (tr) => {
+        resolve(editorState.apply(tr));
+      });
+    });
+
+    const expected = testBuilders.doc(
+      testBuilders.paragraph("first paragraph"),
+    );
+
+    assert(
+      eq(newState.doc, expected),
+      `Expected ${newState.doc} to match ${expected}`,
+    );
+  });
 });
 
 describe("applyTrackedChange", () => {
