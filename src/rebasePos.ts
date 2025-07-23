@@ -9,6 +9,7 @@ import { type Step } from "prosemirror-transform";
  */
 export function rebasePos(pos: number, back: Step[], forth: Step[]) {
   const reset = back
+    .slice()
     .reverse()
     .reduce((acc, step) => step.getMap().invert().map(acc), pos);
   return forth.reduce((acc, step) => step.getMap().map(acc), reset);
