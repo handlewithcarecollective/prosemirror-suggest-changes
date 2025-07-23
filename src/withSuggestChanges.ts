@@ -20,6 +20,7 @@ import { suggestReplaceAroundStep } from "./replaceAroundStep.js";
 import { suggestReplaceStep } from "./replaceStep.js";
 import { type EditorView } from "prosemirror-view";
 import { isSuggestChangesEnabled, suggestChangesKey } from "./plugin.js";
+import { getSuggestionMarks } from "./utils.js";
 
 type StepHandler<S extends Step> = (
   trackedTransaction: Transaction,
@@ -51,9 +52,6 @@ function getStepHandler<S extends Step>(step: S): StepHandler<S> {
   }
   if (step instanceof AttrStep) {
     return trackAttrStep as unknown as StepHandler<S>;
-  }
-  if (step instanceof AddNodeMarkStep) {
-    return trackAddNodeMarkStep as unknown as StepHandler<S>;
   }
 
   // Default handler — simply rebase the step onto the
@@ -98,22 +96,10 @@ export function transformToSuggestionTransaction(
   originalTransaction: Transaction,
   state: EditorState,
 ) {
-  const { deletion, insertion, modification } = state.schema.marks;
-  if (!deletion) {
-    throw new Error(
-      `Failed to transform to suggestion: schema does not contain deletion mark. Did you forget to add it?`,
-    );
-  }
-  if (!insertion) {
-    throw new Error(
-      `Failed to transform to suggestion: schema does not contain insertion mark. Did you forget to add it?`,
-    );
-  }
-  if (!modification) {
-    throw new Error(
-      `Failed to transform to suggestion: schema does not contain modification mark. Did you forget to add it?`,
-    );
-  }
+  // Validate that all required marks exist in the schema
+  const { deletion, insertion, modification } = getSuggestionMarks(
+    state.schema,
+  );
 
   // Find the highest change id in the document so far,
   // and use that as the starting point for new changes

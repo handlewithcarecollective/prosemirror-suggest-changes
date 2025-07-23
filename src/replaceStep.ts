@@ -8,6 +8,7 @@ import { type ReplaceStep, type Step } from "prosemirror-transform";
 
 import { findSuggestionMarkEnd } from "./findSuggestionMarkEnd.js";
 import { rebasePos } from "./rebasePos.js";
+import { getSuggestionMarks } from "./utils.js";
 
 /**
  * Transform a replace step into its equivalent tracked steps.
@@ -47,17 +48,7 @@ export function suggestReplaceStep(
   prevSteps: Step[],
   suggestionId: number,
 ) {
-  const { deletion, insertion } = state.schema.marks;
-  if (!deletion) {
-    throw new Error(
-      `Failed to apply tracked changes to node: schema does not contain deletion mark. Did you forget to add it?`,
-    );
-  }
-  if (!insertion) {
-    throw new Error(
-      `Failed to apply tracked changes to node: schema does not contain insertion mark. Did you forget to add it?`,
-    );
-  }
+  const { deletion, insertion } = getSuggestionMarks(state.schema);
 
   // Check for insertion and deletion marks directly
   // adjacent to this step's boundaries. If they exist,

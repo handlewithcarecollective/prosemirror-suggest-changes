@@ -15,6 +15,7 @@ import { type EditorView } from "prosemirror-view";
 
 import { findSuggestionMarkEnd } from "./findSuggestionMarkEnd.js";
 import { suggestChangesKey } from "./plugin.js";
+import { getSuggestionMarks } from "./utils.js";
 
 /**
  * Given a node and a transform, add a set of steps to the
@@ -86,9 +87,8 @@ function applySuggestionsToTransform(
 }
 
 function revertModifications(node: Node, pos: number, tr: Transform) {
-  const existingMods = node.marks.filter(
-    (mark) => mark.type === node.type.schema.marks["modification"],
-  );
+  const { modification } = getSuggestionMarks(node.type.schema);
+  const existingMods = node.marks.filter((mark) => mark.type === modification);
   for (const mod of existingMods) {
     if (
       mod.attrs["type"] === "attr" &&
@@ -129,12 +129,7 @@ function applyModificationsToTransform(
   dir: number,
   suggestionId?: number,
 ) {
-  const { modification } = node.type.schema.marks;
-  if (!modification) {
-    throw new Error(
-      `Failed to apply modifications to node: schema does not contain modification mark. Did you forget to add it?`,
-    );
-  }
+  const { modification } = getSuggestionMarks(node.type.schema);
 
   const modificationIsInSet =
     suggestionId === undefined
@@ -176,21 +171,38 @@ function applyModificationsToTransform(
   });
 }
 
-function applySuggestionsToNode(node: Node) {
-  const { deletion, insertion } = node.type.schema.marks;
-  if (!deletion) {
-    throw new Error(
-      `Failed to apply tracked changes to node: schema does not contain deletion mark. Did you forget to add it?`,
-    );
+function applyTextNodeSuggestions(node: Node) {
+  if (!node.isText || !node.text) {
+    return null;
   }
-  if (!insertion) {
-    throw new Error(
-      `Failed to apply tracked changes to node: schema does not contain insertion mark. Did you forget to add it?`,
-    );
-  }
+  const { deletion, insertion } = getSuggestionMarks(node.type.schema);
 
   if (deletion.isInSet(node.marks)) {
     return null;
+  }
+
+  // Remove insertion marks from the text node
+  const newMarks = node.marks.filter((mark) => mark.type !== insertion);
+
+  // If it's a zero-width space with insertion mark, remove it
+  if (node.text === "\u200B" && insertion.isInSet(node.marks)) {
+    return null;
+  }
+
+  // Return a new text node with the filtered marks
+  return node.type.schema.text(node.text, newMarks);
+}
+
+function applySuggestionsToNode(node: Node) {
+  const { deletion, insertion } = getSuggestionMarks(node.type.schema);
+
+  if (deletion.isInSet(node.marks)) {
+    return null;
+  }
+
+  // Handle inline nodes (text nodes) without creating a Transform
+  if (node.isText) {
+    return applyTextNodeSuggestions(node);
   }
 
   const transform = new Transform(node);
@@ -219,17 +231,7 @@ export function applySuggestions(
   state: EditorState,
   dispatch?: EditorView["dispatch"],
 ) {
-  const { deletion, insertion } = state.schema.marks;
-  if (!deletion) {
-    throw new Error(
-      `Failed to apply tracked changes to node: schema does not contain deletion mark. Did you forget to add it?`,
-    );
-  }
-  if (!insertion) {
-    throw new Error(
-      `Failed to apply tracked changes to node: schema does not contain insertion mark. Did you forget to add it?`,
-    );
-  }
+  const { deletion, insertion } = getSuggestionMarks(state.schema);
 
   const tr = state.tr;
   applySuggestionsToTransform(state.doc, tr, insertion, deletion);
@@ -248,17 +250,7 @@ export function applySuggestions(
  */
 export function applySuggestion(suggestionId: number): Command {
   return (state, dispatch) => {
-    const { deletion, insertion } = state.schema.marks;
-    if (!deletion) {
-      throw new Error(
-        `Failed to apply tracked changes to node: schema does not contain deletion mark. Did you forget to add it?`,
-      );
-    }
-    if (!insertion) {
-      throw new Error(
-        `Failed to apply tracked changes to node: schema does not contain insertion mark. Did you forget to add it?`,
-      );
-    }
+    const { deletion, insertion } = getSuggestionMarks(state.schema);
 
     const tr = state.tr;
     applySuggestionsToTransform(
@@ -287,17 +279,7 @@ export function revertSuggestions(
   state: EditorState,
   dispatch?: EditorView["dispatch"],
 ) {
-  const { deletion, insertion } = state.schema.marks;
-  if (!deletion) {
-    throw new Error(
-      `Failed to apply tracked changes to node: schema does not contain deletion mark. Did you forget to add it?`,
-    );
-  }
-  if (!insertion) {
-    throw new Error(
-      `Failed to apply tracked changes to node: schema does not contain insertion mark. Did you forget to add it?`,
-    );
-  }
+  const { deletion, insertion } = getSuggestionMarks(state.schema);
   const tr = state.tr;
   applySuggestionsToTransform(state.doc, tr, deletion, insertion);
   applyModificationsToTransform(tr.doc, tr, -1);
@@ -315,17 +297,7 @@ export function revertSuggestions(
  */
 export function revertSuggestion(suggestionId: number): Command {
   return (state, dispatch) => {
-    const { deletion, insertion } = state.schema.marks;
-    if (!deletion) {
-      throw new Error(
-        `Failed to apply tracked changes to node: schema does not contain deletion mark. Did you forget to add it?`,
-      );
-    }
-    if (!insertion) {
-      throw new Error(
-        `Failed to apply tracked changes to node: schema does not contain insertion mark. Did you forget to add it?`,
-      );
-    }
+    const { deletion, insertion } = getSuggestionMarks(state.schema);
 
     const tr = state.tr;
     applySuggestionsToTransform(
@@ -348,22 +320,9 @@ export function revertSuggestion(suggestionId: number): Command {
  */
 export function selectSuggestion(suggestionId: number): Command {
   return (state, dispatch) => {
-    const { deletion, insertion, modification } = state.schema.marks;
-    if (!deletion) {
-      throw new Error(
-        `Failed to apply tracked changes to node: schema does not contain deletion mark. Did you forget to add it?`,
-      );
-    }
-    if (!insertion) {
-      throw new Error(
-        `Failed to apply tracked changes to node: schema does not contain insertion mark. Did you forget to add it?`,
-      );
-    }
-    if (!modification) {
-      throw new Error(
-        `Failed to apply tracked changes to node: schema does not contain modification mark. Did you forget to add it?`,
-      );
-    }
+    const { deletion, insertion, modification } = getSuggestionMarks(
+      state.schema,
+    );
 
     let changeStart = null as number | null;
     let changeEnd = null as number | null;
