@@ -3,6 +3,7 @@ import { type EditorState, type Transaction } from "prosemirror-state";
 import { type AddNodeMarkStep, type Step } from "prosemirror-transform";
 
 import { rebasePos } from "./rebasePos.js";
+import { getSuggestionMarks } from "./utils.js";
 
 /**
  * Transform an add node mark step into its equivalent tracked steps.
@@ -18,12 +19,7 @@ export function trackAddNodeMarkStep(
   prevSteps: Step[],
   suggestionId: number,
 ) {
-  const { modification } = state.schema.marks;
-  if (!modification) {
-    throw new Error(
-      `Failed to apply modifications to node: schema does not contain modification mark. Did you forget to add it?`,
-    );
-  }
+  const { modification } = getSuggestionMarks(state.schema);
 
   const rebasedPos = rebasePos(step.pos, prevSteps, trackedTransaction.steps);
   const $pos = trackedTransaction.doc.resolve(rebasedPos);

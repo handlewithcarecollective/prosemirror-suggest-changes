@@ -16,6 +16,7 @@ import { applySuggestionsToSlice } from "./commands.js";
 import { rebasePos } from "./rebasePos.js";
 import { suggestRemoveNodeMarkStep } from "./removeNodeMarkStep.js";
 import { suggestReplaceStep } from "./replaceStep.js";
+import { getSuggestionMarks } from "./utils.js";
 
 /**
  * This detects and handles changes from `setNodeMarkup` so that these are tracked as a modification
@@ -37,12 +38,7 @@ function suggestSetNodeMarkup(
     step.gapFrom === step.from + 1 &&
     (step as ReplaceAroundStep & { structure: boolean }).structure
   ) {
-    const { modification } = state.schema.marks;
-    if (!modification) {
-      throw new Error(
-        `Failed to apply modifications to node: schema does not contain modification mark. Did you forget to add it?`,
-      );
-    }
+    const { modification } = getSuggestionMarks(state.schema);
 
     const newNode = step.slice.content.firstChild;
     let from = rebasePos(step.from, prevSteps, trackedTransaction.steps);

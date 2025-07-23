@@ -5,6 +5,7 @@ import {
   DecorationSet,
   type DecorationSource,
 } from "prosemirror-view";
+import { getSuggestionMarks } from "./utils.js";
 
 function pilcrow() {
   const span = document.createElement("span");
@@ -13,17 +14,7 @@ function pilcrow() {
 }
 
 export function getSuggestionDecorations(state: EditorState): DecorationSource {
-  const { deletion, insertion } = state.schema.marks;
-  if (!deletion) {
-    throw new Error(
-      `Failed to apply tracked changes to node: schema does not contain deletion mark. Did you forget to add it?`,
-    );
-  }
-  if (!insertion) {
-    throw new Error(
-      `Failed to apply tracked changes to node: schema does not contain insertion mark. Did you forget to add it?`,
-    );
-  }
+  const { deletion, insertion } = getSuggestionMarks(state.schema);
 
   const changeDecorations: Decoration[] = [];
   let lastParentNode: Node | null = null;
