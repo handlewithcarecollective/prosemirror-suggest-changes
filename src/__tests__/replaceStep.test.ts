@@ -736,4 +736,54 @@ describe("ReplaceStep", () => {
       `Expected ${trackedState.doc} to match ${expected}`,
     );
   });
+
+  it("should handle replacements over insertion ranges with multiple text segments", () => {
+    const doc = testBuilders.doc(
+      testBuilders.paragraph(
+        testBuilders.insertion({ id: "0" }, "before"),
+        testBuilders.insertion({ id: "0" }, "<a>plain"),
+        testBuilders.insertion({ id: "0" }, testBuilders.strong("bold")),
+        testBuilders.insertion({ id: "0" }, testBuilders.em("italic<b>both")),
+      ),
+    ) as TaggedNode;
+
+    // Replace content between <a> and <b> with same text but without marks
+    const step = replaceStep(
+      doc,
+      doc.tag["a"]!,
+      doc.tag["b"],
+      new Slice(
+        Fragment.from(testBuilders.schema.text("plainbolditalic")),
+        0,
+        0,
+      ),
+    ) as ReplaceStep | null;
+
+    assert(step, "Could not create test ReplaceStep");
+
+    const editorState = EditorState.create({
+      doc,
+      selection: TextSelection.atEnd(doc),
+    });
+
+    const originalTransaction = editorState.tr;
+    originalTransaction.step(step);
+
+    const trackedTransaction = editorState.tr;
+    suggestReplaceStep(trackedTransaction, editorState, doc, step, [], "1");
+
+    const trackedState = editorState.apply(trackedTransaction);
+
+    const expected = testBuilders.doc(
+      testBuilders.paragraph(
+        testBuilders.insertion({ id: "0" }, "beforeplainbolditalic"),
+        testBuilders.insertion({ id: "0" }, testBuilders.em("both")),
+      ),
+    );
+
+    assert(
+      eq(trackedState.doc, expected),
+      `Expected ${trackedState.doc} to match ${expected}`,
+    );
+  });
 });

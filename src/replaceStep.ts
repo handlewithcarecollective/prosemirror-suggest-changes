@@ -102,6 +102,9 @@ export function suggestReplaceStep(
   });
 
   // Delete the previously-inserted ranges for real
+  // ranges are reverted, applying them in this order saves rebasing
+  // since deletions won't affect earlier deletions
+  insertedRanges.reverse();
   for (const range of insertedRanges) {
     trackedTransaction.delete(range.from, range.to);
   }
@@ -218,6 +221,9 @@ export function suggestReplaceStep(
       },
     );
   }
+
+  // TODO: This could break if there's already a deletion-insertion-deletion-insertion combination
+  // This is the code that creates those combinations, doing this twice in a row could break it
 
   // Detect when a new mark directly abuts an existing mark with
   // a different id and merge them
