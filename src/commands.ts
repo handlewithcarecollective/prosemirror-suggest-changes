@@ -277,13 +277,45 @@ export function applySuggestions(
 }
 
 /**
+ * Command that applies all tracked changes in specified range.
+ *
+ * This means that all content within deletion marks will be deleted.
+ * Insertion marks and modification marks will be removed, and their
+ * contents left in the doc.
+ */
+export function applySuggestionsInRange(from?: number, to?: number) {
+  return (state, dispatch) => {
+    const { deletion, insertion } = getSuggestionMarks(state.schema);
+
+    const tr = state.tr;
+    applySuggestionsToTransform(
+      state.doc,
+      tr,
+      insertion,
+      deletion,
+      undefined,
+      from,
+      to,
+    );
+    applyModificationsToTransform(tr.doc, tr, 1, undefined, from, to);
+    tr.setMeta(suggestChangesKey, { skip: true });
+    dispatch?.(tr);
+    return true;
+  };
+}
+
+/**
  * Command that applies a given tracked change to a document.
  *
  * This means that all content within the deletion mark will be deleted.
  * The insertion mark and modification mark will be removed, and their
  * contents left in the doc.
  */
-export function applySuggestion(suggestionId: SuggestionId): Command {
+export function applySuggestion(
+  suggestionId: SuggestionId,
+  from?: number,
+  to?: number,
+): Command {
   return (state, dispatch) => {
     const { deletion, insertion } = getSuggestionMarks(state.schema);
 
@@ -294,8 +326,10 @@ export function applySuggestion(suggestionId: SuggestionId): Command {
       insertion,
       deletion,
       suggestionId,
+      from,
+      to,
     );
-    applyModificationsToTransform(tr.doc, tr, 1);
+    applyModificationsToTransform(tr.doc, tr, 1, undefined, from, to);
     if (!tr.steps.length) return false;
     tr.setMeta(suggestChangesKey, { skip: true });
     dispatch?.(tr);
@@ -324,13 +358,44 @@ export function revertSuggestions(
 }
 
 /**
+ * Command that reverts all tracked changes in specified range.
+ *
+ * This means that all content within insertion marks will be deleted.
+ * Deletion marks will be removed, and their contents left in the doc.
+ * Modifications tracked in modification marks will be reverted.
+ */
+export function revertSuggestionsInRange(from?: number, to?: number): Command {
+  return (state, dispatch) => {
+    const { deletion, insertion } = getSuggestionMarks(state.schema);
+    const tr = state.tr;
+    applySuggestionsToTransform(
+      state.doc,
+      tr,
+      deletion,
+      insertion,
+      undefined,
+      from,
+      to,
+    );
+    applyModificationsToTransform(tr.doc, tr, -1, undefined, from, to);
+    tr.setMeta(suggestChangesKey, { skip: true });
+    dispatch?.(tr);
+    return true;
+  };
+}
+
+/**
  * Command that reverts a given tracked change in a document.
  *
  * This means that all content within the insertion mark will be deleted.
  * The deletion mark will be removed, and their contents left in the doc.
  * Modifications tracked in modification marks will be reverted.
  */
-export function revertSuggestion(suggestionId: SuggestionId): Command {
+export function revertSuggestion(
+  suggestionId: SuggestionId,
+  from?: number,
+  to?: number,
+): Command {
   return (state, dispatch) => {
     const { deletion, insertion } = getSuggestionMarks(state.schema);
 
@@ -341,10 +406,12 @@ export function revertSuggestion(suggestionId: SuggestionId): Command {
       deletion,
       insertion,
       suggestionId,
+      from,
+      to,
     );
     if (!tr.steps.length) return false;
     tr.setMeta(suggestChangesKey, { skip: true });
-    applyModificationsToTransform(tr.doc, tr, -1);
+    applyModificationsToTransform(tr.doc, tr, -1, undefined, from, to);
     dispatch?.(tr);
     return true;
   };
