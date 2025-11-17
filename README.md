@@ -36,8 +36,10 @@ yarn add @handlewithcare/prosemirror-suggest-changes prosemirror-view prosemirro
     - [`selectSuggestion`](#selectsuggestion)
     - [`revertSuggestion`](#revertsuggestion)
     - [`revertSuggestions`](#revertsuggestions)
+    - [`revertSuggestionsInRange`](#revertsuggestionsinrange)
     - [`applySuggestion`](#applysuggestion)
     - [`applySuggestions`](#applysuggestions)
+    - [`applySuggestionsInRange`](#applysuggestionsinrange)
     - [`enableSuggestChanges`](#enablesuggestchanges)
     - [`disableSuggestChanges`](#disablesuggestchanges)
     - [`toggleSuggestChanges`](#togglesuggestchanges)
@@ -291,6 +293,21 @@ in modification marks will be reverted.
 const revertSuggestions: Command;
 ```
 
+#### `revertSuggestionsInRange`
+
+Command that reverts all tracked changes between two positions in the document.
+
+If `from` is not supplied, it will default to the beginning of the document. If
+`to` is not supplied, it will default to the end of the document.
+
+This means that all content within deletion marks will be deleted. Insertion
+marks and modification marks will be removed, and their contents left in the
+doc.
+
+```ts
+function revertSuggestionsInRange(from?: number, to?: number): Command;
+```
+
 #### `applySuggestion`
 
 Command that applies a given tracked change to a document.
@@ -313,6 +330,21 @@ doc.
 
 ```ts
 const applySuggestions: Command;
+```
+
+#### `applySuggestionsInRange`
+
+Command that applies all tracked changes between two positions in the document.
+
+If `from` is not supplied, it will default to the beginning of the document. If
+`to` is not supplied, it will default to the end of the document.
+
+This means that all content within deletion marks will be deleted. Insertion
+marks and modification marks will be removed, and their contents left in the
+doc.
+
+```ts
+function applySuggestionsInRange(from?: number, to?: number): Command;
 ```
 
 #### `enableSuggestChanges`

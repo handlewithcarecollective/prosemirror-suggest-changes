@@ -283,7 +283,7 @@ export function applySuggestions(
  * Insertion marks and modification marks will be removed, and their
  * contents left in the doc.
  */
-export function applySuggestionsInRange(from?: number, to?: number) {
+export function applySuggestionsInRange(from?: number, to?: number): Command {
   return (state, dispatch) => {
     const { deletion, insertion } = getSuggestionMarks(state.schema);
 
