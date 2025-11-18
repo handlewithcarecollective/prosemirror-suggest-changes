@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 
+import { Schema, type MarkSpec } from "prosemirror-model";
 import { EditorState } from "prosemirror-state";
-import { eq } from "prosemirror-test-builder";
+import { builders, eq } from "prosemirror-test-builder";
 import { assert, describe, it } from "vitest";
 
 import {
@@ -10,7 +11,7 @@ import {
   revertSuggestion,
   revertSuggestions,
 } from "../commands.js";
-
+import { deletion, insertion, modification } from "../schema.js";
 import { testBuilders } from "../testing/testBuilders.js";
 
 describe("applyTrackedChanges", () => {
@@ -204,6 +205,76 @@ describe("applyTrackedChange", () => {
         "sec",
         testBuilders.deletion({ id: 2 }, "ond"),
         testBuilders.insertion({ id: 2 }, "undo"),
+        " paragraph",
+      ),
+    );
+
+    assert(
+      eq(newState.doc, expected),
+      `Expected ${newState.doc} to match ${expected}`,
+    );
+  });
+
+  it("should match suggestion marks even when they include extra attrs", async () => {
+    const insertionWithAuthor: MarkSpec = {
+      ...insertion,
+      attrs: {
+        ...insertion.attrs,
+        author: { default: null },
+      },
+    };
+    const deletionWithAuthor: MarkSpec = {
+      ...deletion,
+      attrs: {
+        ...deletion.attrs,
+        author: { default: null },
+      },
+    };
+    const schemaWithAuthors = new Schema({
+      nodes: {
+        doc: { content: "block+" },
+        paragraph: { content: "inline*", group: "block" },
+        text: { group: "inline" },
+      },
+      marks: {
+        insertion: insertionWithAuthor,
+        deletion: deletionWithAuthor,
+        modification,
+      },
+    });
+    const customBuilders = builders(schemaWithAuthors);
+
+    const doc = customBuilders.doc(
+      customBuilders.paragraph(
+        "fir",
+        customBuilders.deletion({ id: 1, author: "alice" }, "st"),
+        customBuilders.insertion({ id: 1, author: "alice" }, "e"),
+        " paragraph",
+      ),
+      customBuilders.paragraph(
+        "sec",
+        customBuilders.deletion({ id: 2, author: "bob" }, "ond"),
+        customBuilders.insertion({ id: 2, author: "bob" }, "undo"),
+        " paragraph",
+      ),
+    );
+
+    const editorState = EditorState.create({
+      doc,
+    });
+
+    const newState = await new Promise<EditorState>((resolve) => {
+      applySuggestion(1)(editorState, (tr) => {
+        resolve(editorState.apply(tr));
+      });
+    });
+
+    const expected = customBuilders.doc(
+      customBuilders.paragraph("fire paragraph"),
+      customBuilders.paragraph(
+        "sec",
+        customBuilders.deletion({ id: 2, author: "bob" }, "ond"),
+        customBuilders.insertion({ id: 2, author: "bob" }, "undo"),
         " paragraph",
       ),
     );
