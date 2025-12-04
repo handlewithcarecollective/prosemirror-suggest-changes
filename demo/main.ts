@@ -127,7 +127,6 @@ const suggestChangesUiPlugin = new Plugin({
     const toggleButton = document.createElement("button");
     toggleButton.appendChild(document.createTextNode("Enable suggestions"));
     toggleButton.addEventListener("click", () => {
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       toggleSuggestChanges(view.state, view.dispatch);
       view.focus();
     });
@@ -135,7 +134,6 @@ const suggestChangesUiPlugin = new Plugin({
     const applyAllButton = document.createElement("button");
     applyAllButton.appendChild(document.createTextNode("Apply all"));
     applyAllButton.addEventListener("click", () => {
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       applySuggestions(view.state, view.dispatch);
       view.focus();
     });
@@ -143,7 +141,6 @@ const suggestChangesUiPlugin = new Plugin({
     const revertAllButton = document.createElement("button");
     revertAllButton.appendChild(document.createTextNode("Revert all"));
     revertAllButton.addEventListener("click", () => {
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       revertSuggestions(view.state, view.dispatch);
       view.focus();
     });
@@ -176,14 +173,16 @@ const suggestChangesUiPlugin = new Plugin({
   },
 });
 
+const enterCommand = baseKeymap["Enter"];
+
+if (!enterCommand) {
+  throw new Error("Missing enter command");
+}
 const plugins = [
   keymap({
     ...baseKeymap,
-    Enter: chainCommands(
-      splitListItem(schema.nodes.list_item),
-      baseKeymap["Enter"],
-    ),
-    "Shift-Enter": baseKeymap["Enter"],
+    Enter: chainCommands(splitListItem(schema.nodes.list_item), enterCommand),
+    "Shift-Enter": enterCommand,
     Tab: sinkListItem(schema.nodes.list_item),
     "Shift-Tab": liftListItem(schema.nodes.list_item),
     "Mod-i": toggleMark(schema.marks.em),
@@ -205,5 +204,4 @@ const view = new EditorView(editorEl, {
   dispatchTransaction: withSuggestChanges(),
 });
 
-// eslint-disable-next-line @typescript-eslint/unbound-method
 enableSuggestChanges(view.state, view.dispatch);

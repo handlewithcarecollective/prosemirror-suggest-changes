@@ -9,11 +9,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const gitignorePath = path.resolve(__dirname, ".gitignore");
 
-export default tseslint.config(
+export default [
   includeIgnoreFile(gitignorePath),
   eslint.configs.recommended,
-  tseslint.configs.strictTypeChecked,
-  tseslint.configs.stylisticTypeChecked,
+  ...tseslint.configs.strictTypeChecked,
+  ...tseslint.configs.stylisticTypeChecked,
   {
     rules: {
       "@typescript-eslint/consistent-type-imports": [
@@ -30,13 +30,15 @@ export default tseslint.config(
             "eslint.config.js",
             "vite.config.ts",
             "vitest.config.ts",
+            "playwright.config.ts",
             "lint-staged.config.js",
             "demo/main.ts",
             "demo/schema.ts",
+            "test-fixtures/keyboard-test.ts",
           ],
         },
         tsconfigRootDir: import.meta.dirname,
       },
     },
   },
-);
+];

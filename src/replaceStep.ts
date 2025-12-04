@@ -10,6 +10,7 @@ import { findSuggestionMarkEnd } from "./findSuggestionMarkEnd.js";
 import { rebasePos } from "./rebasePos.js";
 import { getSuggestionMarks } from "./utils.js";
 import { type SuggestionId } from "./generateId.js";
+import { joinBlocks } from "./features/joinBlocks/index.js";
 
 /**
  * Transform a replace step into its equivalent tracked steps.
@@ -65,12 +66,11 @@ export function suggestReplaceStep(
       (mark) => mark.type === deletion || mark.type === insertion,
     ) ?? null;
 
-  const markId =
+  let markId =
     (markBefore?.attrs["id"] as SuggestionId | undefined) ??
     (markAfter?.attrs["id"] as SuggestionId | undefined) ??
     suggestionId;
 
-  const insertedRanges: { from: number; to: number }[] = [];
   // Rebase this step's boundaries onto the newest doc
   let stepFrom = rebasePos(step.from, prevSteps, trackedTransaction.steps);
   let stepTo = rebasePos(step.to, prevSteps, trackedTransaction.steps);
@@ -81,32 +81,39 @@ export function suggestReplaceStep(
     );
   }
 
-  // Make a list of any existing insertions that fall within the
-  // range that this step is trying to delete. These will be actually
-  // deleted, rather than marked as deletions.
-  trackedTransaction.doc.nodesBetween(stepFrom, stepTo, (node, pos) => {
-    if (insertion.isInSet(node.marks)) {
-      insertedRanges.push({
-        from: Math.max(pos, stepFrom),
-        to: Math.min(pos + node.nodeSize, step.to),
-      });
-      return false;
-    }
-    return true;
-  });
-
-  // Delete the previously-inserted ranges for real
-  // ranges are reverted, applying them in this order saves rebasing
-  // since deletions won't affect earlier deletions
-  insertedRanges.reverse();
-  for (const range of insertedRanges) {
-    trackedTransaction.delete(range.from, range.to);
+  // Process block joins and delete insertion-marked content
+  // Only do this when actually deleting (stepFrom !== stepTo)
+  // Don't do this when inserting (step.slice.content.size > 0 with stepFrom === stepTo)
+  let didBlockJoin = false;
+  if (stepFrom !== stepTo) {
+    didBlockJoin = joinBlocks(trackedTransaction, stepFrom, stepTo, insertion);
   }
 
   // Update the step boundaries, since we may have just changed
   // the document
   stepFrom = rebasePos(step.from, prevSteps, trackedTransaction.steps);
   stepTo = rebasePos(step.to, prevSteps, trackedTransaction.steps);
+
+  // Re-resolve nodeAfter and markAfter if we did a block join
+  // The original values are stale after joinBlocks modifies the document
+  let nodeAfterResolved = nodeAfter;
+  let markAfterResolved = markAfter;
+  if (didBlockJoin) {
+    const $stepTo = trackedTransaction.doc.resolve(stepTo);
+    nodeAfterResolved = $stepTo.nodeAfter;
+    markAfterResolved =
+      nodeAfterResolved?.marks.find(
+        (mark) => mark.type === deletion || mark.type === insertion,
+      ) ?? null;
+
+    // When inserting new content after a block join, use the suggestionId parameter
+    // instead of reusing adjacent mark IDs. The suggestionId represents a new operation.
+    const sliceHasNewContent =
+      step.slice.openStart === 0 && step.slice.openEnd === 0;
+    if (sliceHasNewContent && step.slice.content.size) {
+      markId = suggestionId;
+    }
+  }
 
   // If there's a deletion, we need to check for and handle
   // the case where it crosses a block boundary, so that we
@@ -221,16 +228,21 @@ export function suggestReplaceStep(
 
   // Detect when a new mark directly abuts an existing mark with
   // a different id and merge them
-  if (nodeAfter && markAfter && markAfter.attrs["id"] !== markId) {
+  // Use re-resolved values if we did a block join
+  if (
+    nodeAfterResolved &&
+    markAfterResolved &&
+    markAfterResolved.attrs["id"] !== markId
+  ) {
     const $nodeAfterStart = trackedTransaction.doc.resolve(stepTo);
-    const nodeAfterEnd = $nodeAfterStart.pos + nodeAfter.nodeSize;
-    trackedTransaction.removeMark(stepTo, nodeAfterEnd, markAfter.type);
+    const nodeAfterEnd = $nodeAfterStart.pos + nodeAfterResolved.nodeSize;
+    trackedTransaction.removeMark(stepTo, nodeAfterEnd, markAfterResolved.type);
     trackedTransaction.addMark(
       stepTo,
       nodeAfterEnd,
-      markAfter.type.create({ id: markId }),
+      markAfterResolved.type.create({ id: markId }),
     );
-    if (markAfter.type === deletion) {
+    if (markAfterResolved.type === deletion) {
       const insertionNode =
         trackedTransaction.doc.resolve(nodeAfterEnd).nodeAfter;
       if (insertionNode && insertion.isInSet(insertionNode.marks)) {
@@ -250,7 +262,19 @@ export function suggestReplaceStep(
   }
 
   // Handle insertions
-  if (step.slice.content.size) {
+  // When didBlockJoin is true, only process insertions if the slice contains
+  // actual new content (closed slice) rather than just structural info for the join (open slice).
+  // Open slices have openStart > 0 or openEnd > 0 and represent block structure.
+  // Closed slices have openStart = 0 and openEnd = 0 and contain new user content.
+  // TODO: Done with AI, not 100% sure about the argument but it works. Kind of.
+  // The replaced content is not equivalent to what would happen without suggestions, just with insertions
+  // but it's workable. Only issues are with deleting between different depths ( for ex. between list and root level paragraph )
+  const sliceHasNewContent =
+    step.slice.openStart === 0 && step.slice.openEnd === 0;
+  const shouldProcessInsertion =
+    step.slice.content.size && (!didBlockJoin || sliceHasNewContent);
+
+  if (shouldProcessInsertion) {
     const $to = trackedTransaction.doc.resolve(stepTo);
 
     // Don't allow inserting content within an existing deletion

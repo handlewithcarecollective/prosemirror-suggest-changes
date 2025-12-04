@@ -786,4 +786,53 @@ describe("ReplaceStep", () => {
       `Expected ${trackedState.doc} to match ${expected}`,
     );
   });
+
+  it("should delete single character at end of insertion without removing entire insertion", () => {
+    const doc = testBuilders.doc(
+      testBuilders.paragraph(
+        "start ",
+        testBuilders.insertion({ id: 1 }, "inserte<a>d"),
+        " more text",
+      ),
+    ) as TaggedNode;
+
+    // Backspace at cursor position (delete the "d")
+    const step = replaceStep(
+      doc,
+      doc.tag["a"]!,
+      doc.tag["a"]! + 1,
+      Slice.empty,
+    ) as ReplaceStep | null;
+
+    assert(step, "Could not create test ReplaceStep");
+
+    const editorState = EditorState.create({
+      doc,
+      selection: new TextSelection(
+        doc.resolve(doc.tag["a"]!),
+        doc.resolve(doc.tag["a"]!),
+      ),
+    });
+
+    const originalTransaction = editorState.tr;
+    originalTransaction.step(step);
+
+    const trackedTransaction = editorState.tr;
+    suggestReplaceStep(trackedTransaction, editorState, doc, step, [], 2);
+
+    const trackedState = editorState.apply(trackedTransaction);
+
+    const expected = testBuilders.doc(
+      testBuilders.paragraph(
+        "start ",
+        testBuilders.insertion({ id: 1 }, "inserte"),
+        " more text",
+      ),
+    );
+
+    assert(
+      eq(trackedState.doc, expected),
+      `Expected ${trackedState.doc} to match ${expected}`,
+    );
+  });
 });

@@ -9,7 +9,10 @@
 # Various tooling caches
 node_modules
 *.tsbuildinfo
+.DS_Store
 
 # direnv/devenv config and cache
 local.envrc
 /.devenv-initialized
+/test-results/.last-run.json
+/test-results/
