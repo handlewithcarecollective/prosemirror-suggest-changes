@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { eq } from "prosemirror-test-builder";
 import { type SuggestionId } from "../generateId.js";
-import { EditorState } from "prosemirror-state";
+import { EditorState, TextSelection } from "prosemirror-state";
 import { Fragment, Slice } from "prosemirror-model";
 import { type ReplaceStep, replaceStep } from "prosemirror-transform";
 import { assert, describe, expect, it } from "vitest";
@@ -206,6 +206,45 @@ describe("withSuggestChanges", () => {
     assert(
       eq(state.doc, expected),
       `Expected ${state.doc} to match ${expected}`,
+    );
+  });
+
+  it("should not create empty paragraphs on cross-block deletions", () => {
+    const doc = testBuilders.doc(
+      testBuilders.orderedList(
+        testBuilders.listItem(testBuilders.paragraph("<a>AAA")),
+      ),
+      testBuilders.paragraph("B<b>BB"),
+    ) as TaggedNode;
+
+    const editorState = EditorState.create({
+      doc,
+      selection: TextSelection.create(doc, doc.tag["a"]!, doc.tag["b"]!),
+    });
+
+    const originalTransaction = editorState.tr;
+    originalTransaction.deleteSelection();
+
+    const suggestedTr = transformToSuggestionTransaction(
+      originalTransaction,
+      editorState,
+    );
+    const newState = editorState.apply(suggestedTr);
+
+    // The deletion should only mark "AAA" and "B" as deleted.
+    // "BB" should remain unmarked, with no extra empty paragraphs.
+    const expected = testBuilders.doc(
+      testBuilders.orderedList(
+        testBuilders.listItem(
+          testBuilders.paragraph(testBuilders.deletion({ id: 1 }, "AAA")),
+        ),
+      ),
+      testBuilders.paragraph(testBuilders.deletion({ id: 1 }, "B"), "BB"),
+    );
+
+    assert(
+      eq(newState.doc, expected),
+      `Expected ${newState.doc} to match ${expected}`,
     );
   });
 
