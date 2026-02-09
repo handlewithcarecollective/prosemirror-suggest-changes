@@ -219,7 +219,7 @@ describe("withSuggestChanges", () => {
 
     const editorState = EditorState.create({
       doc,
-      selection: TextSelection.create(doc, doc.tag["a"]!, doc.tag["b"]!),
+      selection: TextSelection.create(doc, doc.tag["a"]!, doc.tag["b"]),
     });
 
     const originalTransaction = editorState.tr;
