@@ -1,4 +1,4 @@
-import { type Node } from "prosemirror-model";
+  import { type Node } from "prosemirror-model";
 import {
   type EditorState,
   TextSelection,
@@ -249,8 +249,15 @@ export function suggestReplaceStep(
     }
   }
 
-  // Handle insertions
-  if (step.slice.content.size) {
+  // Handle insertions — skip when the slice is purely structural
+  // (e.g. cross-block deletion joining tokens with no text content)
+  const hasTextInSlice = !!step.slice.content.textBetween(
+    0,
+    step.slice.content.size,
+    "",
+    "",
+  );
+  if (step.slice.content.size && (hasTextInSlice || step.from === step.to)) {
     const $to = trackedTransaction.doc.resolve(stepTo);
 
     // Don't allow inserting content within an existing deletion
