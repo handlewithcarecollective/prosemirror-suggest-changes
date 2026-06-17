@@ -170,6 +170,29 @@ describe("applyTrackedChanges", () => {
       `Expected ${newState.doc} to match ${expected}`,
     );
   });
+  it("should apply a block deletion at the end of the doc without throwing", async () => {
+    const doc = testBuilders.doc(
+      testBuilders.paragraph("first"),
+      testBuilders.deletion({ id: 1 }, testBuilders.paragraph("second")),
+    );
+
+    const editorState = EditorState.create({
+      doc,
+    });
+
+    const newState = await new Promise<EditorState>((resolve) => {
+      applySuggestions(editorState, (tr) => {
+        resolve(editorState.apply(tr));
+      });
+    });
+
+    const expected = testBuilders.doc(testBuilders.paragraph("first"));
+
+    assert(
+      eq(newState.doc, expected),
+      `Expected ${newState.doc} to match ${expected}`,
+    );
+  });
 });
 
 describe("applyTrackedChange", () => {
