@@ -88,7 +88,7 @@ function applySuggestionsToTransform(
         // textBetween is fine with negative positions (??),
         // but it errors if passed a position greater than the
         // size of the doc
-        deletionTo <= tr.doc.content.size
+        deletionTo < tr.doc.content.size
           ? tr.doc.textBetween(deletionTo, deletionTo + 1, "x", "x")
           : "";
       const addedRange = prevChar === " " && nextChar === " " ? 1 : 0;
