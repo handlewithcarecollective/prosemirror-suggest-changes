@@ -34,6 +34,7 @@
     "fix": "concurrently -P 'npm:fix:* {@}' --",
     "prepack": "yarn build",
     "test": "vitest",
+    "test:e2e": "playwright test",
     "prepare": "husky"
   },
   "packageManager": "yarn@4.6.0",
@@ -41,6 +42,7 @@
     "@eslint/compat": "^1.2.7",
     "@eslint/js": "^9.21.0",
     "@handlewithcare/remark-prosemirror": "^0.1.5",
+    "@playwright/test": "^1.56.0",
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.11.5",
     "@tsconfig/strictest": "^2.0.5",
@@ -51,6 +53,7 @@
     "jsdom": "^26.0.0",
     "lint-staged": "^15.4.3",
     "markdown-toc": "^1.2.0",
+    "playwright": "^1.56.0",
     "prettier": "^3.5.3",
     "prosemirror-commands": "^1.7.0",
     "prosemirror-history": "^1.4.1",
