@@ -115,6 +115,33 @@ export function suggestReplaceStep(
   if (stepFrom !== stepTo) {
     let $stepFrom = trackedTransaction.doc.resolve(stepFrom);
     let $stepTo = trackedTransaction.doc.resolve(stepTo);
+
+    // When the step only deletes an inserted block boundary (the author removing a break
+    // they just added), join the blocks and drop the insertion anchors instead
+    // of stacking a deletion mark on a break that was never accepted. Stacked splits merge
+    // their anchors into one run, so match the edges with endsWith/startsWith rather than
+    // equality.
+    const anchorBefore = $stepFrom.nodeBefore?.text?.endsWith("\u200B")
+      ? insertion.isInSet($stepFrom.nodeBefore.marks)
+      : undefined;
+    const anchorAfter = $stepTo.nodeAfter?.text?.startsWith("\u200B")
+      ? insertion.isInSet($stepTo.nodeAfter.marks)
+      : undefined;
+    if (
+      step.slice.size === 0 &&
+      !$stepFrom.nodeAfter &&
+      !$stepTo.nodeBefore &&
+      (anchorBefore || anchorAfter)
+    ) {
+      // Delete the boundary together with whichever anchors mark it, joining the blocks.
+      const joinFrom = anchorBefore ? stepFrom - 1 : stepFrom;
+      trackedTransaction.delete(joinFrom, anchorAfter ? stepTo + 1 : stepTo);
+      trackedTransaction.setSelection(
+        TextSelection.near(trackedTransaction.doc.resolve(joinFrom)),
+      );
+      return markId === suggestionId;
+    }
+
     // When there are no characters to mark with deletions before
     // the end of a block, we add zero-width, non-printable
     // characters as markers to indicate that a deletion exists

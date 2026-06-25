@@ -5,6 +5,7 @@ import {
   TextSelection,
 } from "prosemirror-state";
 import { getSuggestionDecorations } from "./decorations.js";
+import { removeInsertedBreak } from "./removeInsertedBreak.js";
 
 export const suggestChangesKey = new PluginKey<{ enabled: boolean }>(
   "@handlewithcare/prosemirror-suggest-changes",
@@ -31,6 +32,20 @@ export function suggestChanges() {
       // Add a custom keydown handler that skips over any zero-width
       // spaces that we've inserted so that users aren't aware of them
       handleKeyDown(view, event) {
+        if (
+          (event.key === "Backspace" || event.key === "Delete") &&
+          removeInsertedBreak(event.key === "Backspace" ? -1 : 1)(
+            view.state,
+            (tr) => {
+              view.dispatch(tr);
+            },
+          )
+        ) {
+          // Removing the inserted break fully handles the key, so claim the event to keep
+          // the default Backspace/Delete from acting on top of the join.
+          return true;
+        }
+
         if (
           event.key === "ArrowRight" &&
           view.state.selection instanceof TextSelection &&
@@ -63,7 +78,7 @@ export function suggestChanges() {
           );
         }
 
-        // Never block any other handlers from running after
+        // Anything we didn't claim above falls through to the default handlers.
         return false;
       },
     },

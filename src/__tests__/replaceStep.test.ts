@@ -786,4 +786,132 @@ describe("ReplaceStep", () => {
       `Expected ${trackedState.doc} to match ${expected}`,
     );
   });
+
+  it("should join the blocks when deleting an inserted block boundary", () => {
+    const doc = testBuilders.doc(
+      testBuilders.paragraph(
+        "A",
+        testBuilders.insertion({ id: 1 }, "\u200B<a>"),
+      ),
+      testBuilders.paragraph(
+        testBuilders.insertion({ id: 1 }, "<b>\u200B"),
+        "B",
+      ),
+    ) as TaggedNode;
+
+    // Join the two paragraphs by deleting the boundary between them
+    const step = replaceStep(
+      doc,
+      doc.tag["a"]!,
+      doc.tag["b"],
+      Slice.empty,
+    ) as ReplaceStep | null;
+    assert(step, "Could not create test ReplaceStep");
+
+    const editorState = EditorState.create({
+      doc,
+      selection: TextSelection.create(doc, doc.tag["b"]!),
+    });
+
+    const originalTransaction = editorState.tr;
+    originalTransaction.step(step);
+
+    const trackedTransaction = editorState.tr;
+    suggestReplaceStep(trackedTransaction, editorState, doc, step, [], 1);
+
+    const trackedState = editorState.apply(trackedTransaction);
+
+    const expected = testBuilders.doc(testBuilders.paragraph("AB"));
+
+    assert(
+      eq(trackedState.doc, expected),
+      `Expected ${trackedState.doc} to match ${expected}`,
+    );
+  });
+
+  it("should join the blocks when the inserted boundary is anchored on one side", () => {
+    const doc = testBuilders.doc(
+      testBuilders.paragraph(
+        "first",
+        testBuilders.insertion({ id: 1 }, "\u200B<a>"),
+      ),
+      testBuilders.paragraph("<b>"),
+      testBuilders.paragraph("second"),
+    ) as TaggedNode;
+
+    // Join the empty paragraph into "first" by deleting the boundary between them
+    const step = replaceStep(
+      doc,
+      doc.tag["a"]!,
+      doc.tag["b"],
+      Slice.empty,
+    ) as ReplaceStep | null;
+    assert(step, "Could not create test ReplaceStep");
+
+    const editorState = EditorState.create({
+      doc,
+      selection: TextSelection.create(doc, doc.tag["b"]!),
+    });
+
+    const originalTransaction = editorState.tr;
+    originalTransaction.step(step);
+
+    const trackedTransaction = editorState.tr;
+    suggestReplaceStep(trackedTransaction, editorState, doc, step, [], 1);
+
+    const trackedState = editorState.apply(trackedTransaction);
+
+    const expected = testBuilders.doc(
+      testBuilders.paragraph("first"),
+      testBuilders.paragraph("second"),
+    );
+
+    assert(
+      eq(trackedState.doc, expected),
+      `Expected ${trackedState.doc} to match ${expected}`,
+    );
+  });
+
+  it("should remove a single inserted break when anchors from stacked splits are merged", () => {
+    const doc = testBuilders.doc(
+      testBuilders.paragraph(
+        "A",
+        testBuilders.insertion({ id: 1 }, "\u200B\u200B<a>"),
+      ),
+      testBuilders.paragraph("<b>"),
+      testBuilders.paragraph("B"),
+    ) as TaggedNode;
+
+    // Join the empty paragraph into "A" by deleting the boundary between them
+    const step = replaceStep(
+      doc,
+      doc.tag["a"]!,
+      doc.tag["b"],
+      Slice.empty,
+    ) as ReplaceStep | null;
+    assert(step, "Could not create test ReplaceStep");
+
+    const editorState = EditorState.create({
+      doc,
+      selection: TextSelection.create(doc, doc.tag["b"]!),
+    });
+
+    const originalTransaction = editorState.tr;
+    originalTransaction.step(step);
+
+    const trackedTransaction = editorState.tr;
+    suggestReplaceStep(trackedTransaction, editorState, doc, step, [], 1);
+
+    const trackedState = editorState.apply(trackedTransaction);
+
+    const expected = testBuilders.doc(
+      testBuilders.paragraph("A", testBuilders.insertion({ id: 1 }, "\u200B")),
+      testBuilders.paragraph("B"),
+    );
+
+    assert(
+      eq(trackedState.doc, expected),
+      `Expected ${trackedState.doc} to match ${expected}`,
+    );
+  });
 });
