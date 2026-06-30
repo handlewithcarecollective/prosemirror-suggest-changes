@@ -3,4 +3,4 @@
 .yarnrc.yml
 .pnp.*
 
-flake.lock
+devenv.*
