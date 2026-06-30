@@ -3,7 +3,7 @@
  * @type {import('lint-staged').Configuration}
  */
 export default {
-  "*.{tsx,ts,js,cjs,json}": ["eslint --fix", "oxfmt"],
+  "*.{tsx,ts,js,cjs,json}": ["oxlint --fix", "oxfmt"],
   // If typescript files or json files (Typescript statically types .json
   // files, and package.json and tsconfig.json files can change type
   // correctness) change, we run tsc on the whole project. We use

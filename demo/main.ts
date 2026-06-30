@@ -181,9 +181,9 @@ const plugins = [
     ...baseKeymap,
     Enter: chainCommands(
       splitListItem(schema.nodes.list_item),
-      baseKeymap["Enter"],
+      baseKeymap.Enter,
     ),
-    "Shift-Enter": baseKeymap["Enter"],
+    "Shift-Enter": baseKeymap.Enter,
     Tab: sinkListItem(schema.nodes.list_item),
     "Shift-Tab": liftListItem(schema.nodes.list_item),
     "Mod-i": toggleMark(schema.marks.em),

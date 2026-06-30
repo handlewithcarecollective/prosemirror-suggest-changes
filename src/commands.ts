@@ -34,7 +34,7 @@ function applySuggestionsToTransform(
       ? (marks: readonly Mark[]) => markTypeToApply.isInSet(marks)
       : (marks: readonly Mark[]) => {
           const mark = markTypeToApply.isInSet(marks);
-          return mark && mark.attrs["id"] === suggestionId ? mark : undefined;
+          return mark?.attrs["id"] === suggestionId ? mark : undefined;
         };
 
   const toRevertIsInSet =
@@ -42,7 +42,7 @@ function applySuggestionsToTransform(
       ? (marks: readonly Mark[]) => markTypeToRevert.isInSet(marks)
       : (marks: readonly Mark[]) => {
           const mark = markTypeToRevert.isInSet(marks);
-          return mark && mark.attrs["id"] === suggestionId ? mark : undefined;
+          return mark?.attrs["id"] === suggestionId ? mark : undefined;
         };
 
   const isToApply = toApplyIsInSet(node.marks);
@@ -455,13 +455,7 @@ export function selectSuggestion(suggestionId: SuggestionId): Command {
 
     dispatch(
       state.tr
-        .setSelection(
-          TextSelection.create(
-            state.doc,
-            changeStart as unknown as number,
-            changeEnd as unknown as number,
-          ),
-        )
+        .setSelection(TextSelection.create(state.doc, changeStart, changeEnd))
         .scrollIntoView(),
     );
     return true;
