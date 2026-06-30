@@ -51,7 +51,7 @@
     "jsdom": "^26.0.0",
     "lint-staged": "^15.4.3",
     "markdown-toc": "^1.2.0",
-    "prettier": "^3.5.3",
+    "oxfmt": "^0.57.0",
     "prosemirror-commands": "^1.7.0",
     "prosemirror-history": "^1.4.1",
     "prosemirror-inputrules": "^1.4.0",

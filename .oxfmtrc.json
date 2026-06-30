@@ -1,0 +1,7 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "proseWrap": "always",
+  "printWidth": 80,
+  "sortPackageJson": false,
+  "ignorePatterns": ["/dist/", ".yarn/", ".yarnrc.yml", ".pnp.*", "devenv.*"]
+}
