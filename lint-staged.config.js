@@ -3,10 +3,10 @@
  * @type {import('lint-staged').Configuration}
  */
 export default {
-  "*.{tsx,ts,js,cjs,json}": (files) =>
-    files.length
-      ? [`oxlint --fix ${files.join(" ")}`, `oxfmt ${files.join(" ")}`]
-      : [],
+  "*.{tsx,ts,js,cjs}": [
+    `oxlint --fix -no-error-on-unmatched-pattern`,
+    `oxfmt --no-error-on-unmatched-pattern`,
+  ],
   // If typescript files or json files (Typescript statically types .json
   // files, and package.json and tsconfig.json files can change type
   // correctness) change, we run tsc on the whole project. We use
@@ -23,5 +23,5 @@ export default {
   "README.md": () => "yarn fix:toc",
   // For markdown, HTML, and YAML files, we just run Prettier. ESLint doesn't have
   // anything to say about these.
-  "*.{md,yml,html,swcrc}": "oxfmt",
+  "*.{md,yml,html,swcrc,json}": "oxfmt",
 };

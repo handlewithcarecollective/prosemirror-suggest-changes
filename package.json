@@ -64,7 +64,7 @@
     "prosemirror-view": "^1.38.0",
     "remark-parse": "^11.0.0",
     "rimraf": "^6.0.1",
-    "typescript": "^5.8.2",
+    "typescript": "^7.0.1-rc",
     "unified": "^11.0.5",
     "vite": "^6.2.0",
     "vitest": "^3.0.7"
