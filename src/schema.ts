@@ -79,7 +79,6 @@ export const modification: MarkSpec = {
         "data-id": JSON.stringify(mark.attrs["id"]),
         "data-mod-type": mark.attrs["type"] as string,
         "data-mod-prev-val": JSON.stringify(mark.attrs["previousValue"]),
-        // TODO: Try to serialize marks with toJSON?
         "data-mod-new-val": JSON.stringify(mark.attrs["newValue"]),
       },
       0,

@@ -49,12 +49,11 @@ export function trackAddNodeMarkStep(
     .create({
       id: suggestionId,
       type: "mark",
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      previousValue: previousValue?.toJSON(),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      newValue: step.mark.toJSON(),
+      previousValue: previousValue?.toJSON() as Record<string, unknown> | null,
+      newValue: step.mark.toJSON() as Record<string, unknown> | null,
     })
     .addToSet(newMarks);
+
   trackedTransaction.setNodeMarkup(rebasedPos, null, null, newMarks);
   return true;
 }
