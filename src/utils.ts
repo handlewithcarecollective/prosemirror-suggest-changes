@@ -1,9 +1,14 @@
-import { type MarkType, type Schema } from "prosemirror-model";
+import {
+  type ResolvedPos,
+  type MarkType,
+  type Schema,
+} from "prosemirror-model";
 
 export interface SuggestionMarks {
   insertion: MarkType;
   deletion: MarkType;
   modification: MarkType;
+  blockBoundarySuggestion: MarkType;
 }
 
 /**
@@ -11,7 +16,8 @@ export interface SuggestionMarks {
  * Throws an error if any of the required marks are not found.
  */
 export function getSuggestionMarks(schema: Schema): SuggestionMarks {
-  const { insertion, deletion, modification } = schema.marks;
+  const { insertion, deletion, modification, blockBoundarySuggestion } =
+    schema.marks;
 
   if (!insertion) {
     throw new Error(
@@ -31,5 +37,20 @@ export function getSuggestionMarks(schema: Schema): SuggestionMarks {
     );
   }
 
-  return { insertion, deletion, modification };
+  if (!blockBoundarySuggestion) {
+    throw new Error(
+      "Failed to find blockBoundarySuggestion mark in schema. Did you forget to add it?",
+    );
+  }
+
+  return { insertion, deletion, modification, blockBoundarySuggestion };
+}
+
+export function findTextblockAncestor($pos: ResolvedPos) {
+  let d = $pos.depth;
+  while (!$pos.node(d).isTextblock && d > 0) {
+    d--;
+  }
+
+  return d === 0 ? $pos.pos : $pos.before(d);
 }

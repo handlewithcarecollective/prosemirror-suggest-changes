@@ -100,9 +100,6 @@ function applySuggestionsToTransform(
     const insertionTo = insertionFrom + child.nodeSize;
     if (child.isInline) {
       tr.removeMark(insertionFrom, insertionTo, markTypeToApply);
-      if (child.text === "\u200B") {
-        tr.delete(insertionFrom, insertionTo);
-      }
     } else {
       tr.removeNodeMark(insertionFrom, markTypeToApply);
     }
