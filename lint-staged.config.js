@@ -23,5 +23,5 @@ export default {
   "README.md": () => "yarn fix:toc",
   // For markdown, HTML, and YAML files, we just run Prettier. ESLint doesn't have
   // anything to say about these.
-  "*.{md,yml,html,swcrc,json}": "oxfmt",
+  "*.{md,yml,html,swcrc,json}": "oxfmt --no-error-on-unmatched-pattern",
 };
