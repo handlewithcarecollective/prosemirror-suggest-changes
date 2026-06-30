@@ -1,0 +1,90 @@
+[language-server.oxfmt]
+command = "yarn"
+args = ["oxfmt", "--lsp"]
+provideFormatter = true
+
+[language-server.oxlint]
+command = "yarn"
+args = ["oxlint", "--lsp"]
+
+[language-server.tsgo]
+command = "yarn"
+args = ["tsc", "--lsp", "--stdio"]
+
+[language-server.tsgo.config.typescript]
+updateImportsOnFileMove.enabled = "always"
+suggest.completeFunctionCalls = true
+tsserver.enableTracing = true
+format.enable = false
+preferences.importModuleSpecifier = "non-relative"
+preferences.importModuleSpecifierEnding = "js"
+tsserver.experimental.enableProjectDiagnostics = true
+
+[[language]]
+name = "typescript"
+language-servers = [
+  { name = "tsgo", except-features = [
+    "format",
+  ] },
+  "oxfmt",
+  "oxlint",
+]
+
+[[language]]
+name = "tsx"
+language-servers = [
+  { name = "tsgo", except-features = [
+    "format",
+  ] },
+  "oxfmt",
+  "oxlint",
+]
+
+[[language]]
+name = "javascript"
+language-servers = [
+  { name = "tsgo", except-features = [
+    "format",
+  ] },
+  "oxfmt",
+  "oxlint",
+]
+
+[[language]]
+name = "jsx"
+language-servers = [
+  { name = "tsgo", except-features = [
+    "format",
+  ] },
+  "oxfmt",
+  "oxlint",
+]
+
+[[language]]
+name = "json"
+language-servers = ["oxfmt"]
+
+[[language]]
+name = "toml"
+language-servers = ["oxfmt"]
+auto-format = true
+
+[[language]]
+name = "markdown"
+language-servers = [
+  { name = "markdown-oxide", except-features = [
+    "format",
+  ] },
+  "oxfmt",
+  "ltex-ls-plus",
+]
+
+[[language]]
+name = "css"
+language-servers = ["oxfmt"]
+auto-format = true
+
+[[language]]
+name = "toml"
+language-servers = ["oxfmt"]
+auto-format = true
