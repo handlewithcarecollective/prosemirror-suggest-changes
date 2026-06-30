@@ -5,6 +5,7 @@
 # Yarn dependencies
 .yarn/*
 !.yarn/versions
+!.yarn/plugins
 
 # Various tooling caches
 node_modules

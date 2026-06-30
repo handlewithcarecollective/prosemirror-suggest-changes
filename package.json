@@ -20,38 +20,37 @@
     "build:esm": "swc ./src --strip-leading-paths --ignore **/__tests__/**,**/testing/** -d ./dist/",
     "build:types": "tsc -p tsconfig.build.json",
     "build": "rimraf dist && concurrently -P 'npm:build:* {@}' --",
-    "check:format": "prettier --check .",
-    "check:lint": "eslint .",
+    "check:format": "oxfmt --check .",
+    "check:lint": "oxlint .",
     "check:types": "tsc",
-    "check": "concurrently -P 'npm:check:* {@}' --",
+    "check": "yarn check:format && yarn check:lint && yarn check:types",
     "clean": "rimraf \"./dist/!(cjs/package.json)\"",
     "demo": "yarn vite",
     "demo:build": "yarn vite build --outDir docs --base=/prosemirror-suggest-changes/",
     "dev": "yarn build -- --watch",
-    "fix:format": "prettier --write .",
-    "fix:lint": "eslint --cache --fix .",
+    "fix:format": "oxfmt .",
+    "fix:lint": "oxlint --fix .",
     "fix:toc": "markdown-toc --bullets='-' -i README.md",
-    "fix": "concurrently -P 'npm:fix:* {@}' --",
+    "fix": "yarn fix:format && yarn fix:lint && yarn fix:toc",
     "prepack": "yarn build",
     "test": "vitest",
     "prepare": "husky"
   },
-  "packageManager": "yarn@4.6.0",
+  "packageManager": "yarn@4.17.0+sha512.c2957de2f9025ab14d63b24d0d8be1f1655810e22c341042c27f7ecd017b180ec12db73d69ac366d71b304ef9f069349ce462de96f04f8f1da317f4f762c95ae",
   "devDependencies": {
-    "@eslint/compat": "^1.2.7",
     "@eslint/js": "^9.21.0",
     "@handlewithcare/remark-prosemirror": "^0.1.5",
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.11.5",
     "@tsconfig/strictest": "^2.0.5",
     "@types/node": "^22",
-    "concurrently": "^9.1.2",
-    "eslint": "^9.21.0",
     "husky": "^9.1.7",
     "jsdom": "^26.0.0",
     "lint-staged": "^15.4.3",
     "markdown-toc": "^1.2.0",
-    "prettier": "^3.5.3",
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0",
+    "oxlint-tsgolint": "^0.24.0",
     "prosemirror-commands": "^1.7.0",
     "prosemirror-history": "^1.4.1",
     "prosemirror-inputrules": "^1.4.0",
@@ -65,8 +64,7 @@
     "prosemirror-view": "^1.38.0",
     "remark-parse": "^11.0.0",
     "rimraf": "^6.0.1",
-    "typescript": "^5.8.2",
-    "typescript-eslint": "^8.26.0",
+    "typescript": "^7.0.1-rc",
     "unified": "^11.0.5",
     "vite": "^6.2.0",
     "vitest": "^3.0.7"
@@ -76,5 +74,13 @@
     "prosemirror-state": "^1.0.0",
     "prosemirror-transform": "^1.0.0",
     "prosemirror-view": "^1.0.0"
+  },
+  "dependenciesMeta": {
+    "@swc/core": {
+      "built": true
+    },
+    "esbuild": {
+      "built": true
+    }
   }
 }
