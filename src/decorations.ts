@@ -1,4 +1,4 @@
-import type { EditorState } from "prosemirror-state";
+import { Selection, type EditorState } from "prosemirror-state";
 import {
   Decoration,
   DecorationSet,
@@ -18,6 +18,7 @@ export function getSuggestionDecorations(state: EditorState): DecorationSource {
     state.schema,
   );
 
+  const widgetPositions = new Set<number>();
   const changeDecorations: Decoration[] = [];
   state.doc.descendants((node, pos) => {
     if (node.isTextblock && node.childCount) {
@@ -46,8 +47,19 @@ export function getSuggestionDecorations(state: EditorState): DecorationSource {
       const markType =
         boundarySuggestion.type === "insertion" ? insertion : deletion;
 
+      const widgetPos = Selection.near(
+        state.doc.resolve(pos + node.nodeSize),
+        -1,
+      ).from;
+
+      if (widgetPositions.has(widgetPos)) {
+        return true;
+      }
+
+      widgetPositions.add(widgetPos);
+
       changeDecorations.push(
-        Decoration.widget(pos + node.nodeSize - 1, pilcrow, {
+        Decoration.widget(widgetPos, pilcrow, {
           key:
             typeof boundarySuggestion.id === "number"
               ? boundarySuggestion.id.toString()

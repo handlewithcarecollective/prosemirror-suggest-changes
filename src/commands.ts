@@ -108,21 +108,42 @@ function applySuggestionsToTransform(
   });
 
   // Second pass to join on any deleted block boundaries
-  node.descendants((child, pos) => {
+  tr.doc.descendants((child, pos) => {
     const boundarySuggestion = blockBoundarySuggestion.isInSet(child.marks);
 
     if (!boundarySuggestion) return true;
 
-    const joinPoint = pos + child.nodeSize;
+    const joinPoint = tr.mapping.invert().map(pos + child.nodeSize);
+    pos = tr.mapping.invert().map(pos);
 
     if (from !== undefined && joinPoint < from) return true;
     if (to !== undefined && joinPoint > to) return true;
+    if (tr.mapping.mapResult(pos).deleted) return true;
+    if (tr.mapping.mapResult(joinPoint).deleted) return true;
+
+    tr.removeNodeMark(tr.mapping.map(pos), boundarySuggestion);
 
     if (boundarySuggestion.attrs["type"] === markTypeToRevert.name) {
-      tr.join(pos + child.nodeSize);
+      tr.join(tr.mapping.map(joinPoint));
+      const mappedJoinPoint = tr.mapping.map(joinPoint);
+      // check if the previous and the next text part is a space
+      // if so, we can delete the whole text part
+      const prevChar = tr.doc.textBetween(
+        mappedJoinPoint - 1,
+        mappedJoinPoint,
+        "x",
+        "x",
+      );
+      const nextChar = tr.doc.textBetween(
+        mappedJoinPoint,
+        mappedJoinPoint + 1,
+        "x",
+        "x",
+      );
+      if (prevChar === " " && nextChar === " ") {
+        tr.deleteRange(mappedJoinPoint, mappedJoinPoint + 1);
+      }
     }
-
-    tr.removeNodeMark(pos, boundarySuggestion);
 
     return true;
   });

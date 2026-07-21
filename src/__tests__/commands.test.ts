@@ -89,9 +89,12 @@ describe("applyTrackedChanges", () => {
 
   it("should treat deletions across boundaries as a single deletion", async () => {
     const doc = testBuilders.doc(
-      testBuilders.paragraph(
-        "first ",
-        testBuilders.deletion({ id: 1 }, "paragraph"),
+      testBuilders.blockBoundarySuggestion(
+        { id: 1, type: "deletion" },
+        testBuilders.paragraph(
+          "first ",
+          testBuilders.deletion({ id: 1 }, "paragraph"),
+        ),
       ),
       testBuilders.paragraph(
         testBuilders.deletion({ id: 1 }, "second "),
@@ -144,11 +147,14 @@ describe("applyTrackedChanges", () => {
       `Expected ${newState.doc} to match ${expected}`,
     );
   });
-  it("should removed doubles spaces around deletions accross boundaries", async () => {
+  it("should removed doubles spaces around deletions across boundaries", async () => {
     const doc = testBuilders.doc(
-      testBuilders.paragraph(
-        "first ",
-        testBuilders.deletion({ id: "1" }, "paragraph"),
+      testBuilders.blockBoundarySuggestion(
+        { id: 1, type: "deletion" },
+        testBuilders.paragraph(
+          "first ",
+          testBuilders.deletion({ id: "1" }, "paragraph"),
+        ),
       ),
       testBuilders.paragraph(
         testBuilders.deletion({ id: "1" }, "second"),
@@ -385,9 +391,12 @@ describe("revertTrackedChanges", () => {
 
   it("should treat insertions across boundaries as a single insertion", async () => {
     const doc = testBuilders.doc(
-      testBuilders.paragraph(
-        "first ",
-        testBuilders.insertion({ id: 1 }, "paragraph"),
+      testBuilders.blockBoundarySuggestion(
+        { id: 1, type: "insertion" },
+        testBuilders.paragraph(
+          "first ",
+          testBuilders.insertion({ id: 1 }, "paragraph"),
+        ),
       ),
       testBuilders.paragraph(
         testBuilders.insertion({ id: 1 }, "second "),

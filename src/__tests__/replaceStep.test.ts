@@ -227,9 +227,12 @@ describe("ReplaceStep", () => {
     const trackedState = editorState.apply(trackedTransaction);
 
     const expected = testBuilders.doc(
-      testBuilders.paragraph(
-        "first",
-        testBuilders.deletion({ id: 1 }, " paragraph"),
+      testBuilders.blockBoundarySuggestion(
+        { id: 1, type: "deletion" },
+        testBuilders.paragraph(
+          "first",
+          testBuilders.deletion({ id: 1 }, " paragraph"),
+        ),
       ),
       testBuilders.paragraph(
         testBuilders.deletion({ id: 1 }, "second"),
@@ -289,9 +292,12 @@ describe("ReplaceStep", () => {
 
   it("should shift insertions to the end of deletions across block boundaries", () => {
     const doc = testBuilders.doc(
-      testBuilders.paragraph(
-        "first",
-        testBuilders.deletion({ id: 1 }, " para<a>graph"),
+      testBuilders.blockBoundarySuggestion(
+        { id: 1, type: "deletion" },
+        testBuilders.paragraph(
+          "first",
+          testBuilders.deletion({ id: 1 }, " para<a>graph"),
+        ),
       ),
       testBuilders.paragraph(
         testBuilders.deletion({ id: 1 }, "second"),
@@ -323,9 +329,12 @@ describe("ReplaceStep", () => {
     const trackedState = editorState.apply(trackedTransaction);
 
     const expected = testBuilders.doc(
-      testBuilders.paragraph(
-        "first",
-        testBuilders.deletion({ id: 1 }, " paragraph"),
+      testBuilders.blockBoundarySuggestion(
+        { id: 1, type: "deletion" },
+        testBuilders.paragraph(
+          "first",
+          testBuilders.deletion({ id: 1 }, " paragraph"),
+        ),
       ),
       testBuilders.paragraph(
         testBuilders.deletion({ id: 1 }, "second"),

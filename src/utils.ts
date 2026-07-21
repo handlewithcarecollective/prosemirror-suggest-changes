@@ -2,6 +2,7 @@ import {
   type ResolvedPos,
   type MarkType,
   type Schema,
+  type NodeRange,
 } from "prosemirror-model";
 
 export interface SuggestionMarks {
@@ -46,11 +47,28 @@ export function getSuggestionMarks(schema: Schema): SuggestionMarks {
   return { insertion, deletion, modification, blockBoundarySuggestion };
 }
 
-export function findTextblockAncestor($pos: ResolvedPos) {
+export function findBlockAncestor($pos: ResolvedPos) {
   let d = $pos.depth;
-  while (!$pos.node(d).isTextblock && d > 0) {
+  while (!$pos.node(d).isBlock && d > 0) {
     d--;
   }
 
   return d === 0 ? $pos.pos : $pos.before(d);
+}
+
+export function startsInBlockRange($pos: ResolvedPos, blockRange: NodeRange) {
+  let d = $pos.depth;
+  while (!$pos.node(d).isBlock && d > 0) {
+    d--;
+  }
+
+  d--;
+
+  const starts: number[] = [];
+  while (d >= blockRange.depth) {
+    starts.push($pos.start(d));
+    d--;
+  }
+
+  return starts;
 }
