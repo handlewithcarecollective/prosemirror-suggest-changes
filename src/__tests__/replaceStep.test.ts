@@ -560,9 +560,12 @@ describe("ReplaceStep", () => {
     const trackedState = editorState.apply(trackedTransaction);
 
     const expected = testBuilders.doc(
-      testBuilders.paragraph(
-        "first",
-        testBuilders.deletion({ id: 1 }, " paragraph"),
+      testBuilders.blockBoundarySuggestion(
+        { id: 1, type: "deletion" },
+        testBuilders.paragraph(
+          "first",
+          testBuilders.deletion({ id: 1 }, " paragraph"),
+        ),
       ),
       testBuilders.paragraph(
         testBuilders.deletion({ id: 1 }, "second"),
@@ -610,70 +613,11 @@ describe("ReplaceStep", () => {
     const trackedState = editorState.apply(trackedTransaction);
 
     const expected = testBuilders.doc(
-      testBuilders.paragraph(
-        "first paragraph",
-        testBuilders.deletion({ id: 1 }, "\u200B"),
+      testBuilders.blockBoundarySuggestion(
+        { id: 1, type: "deletion" },
+        testBuilders.paragraph("first paragraph"),
       ),
-      testBuilders.paragraph(
-        testBuilders.deletion({ id: 1 }, "\u200B"),
-        "second paragraph",
-      ),
-    );
-
-    assert(
-      eq(trackedState.doc, expected),
-      `Expected ${trackedState.doc} to match ${expected}`,
-    );
-  });
-
-  it("should clear zero-width chars after joining with printable deletions", () => {
-    const doc = testBuilders.doc(
-      testBuilders.paragraph(
-        "first paragraph",
-        testBuilders.deletion({ id: 1 }, "\u200B"),
-      ),
-      testBuilders.paragraph(
-        testBuilders.deletion({ id: 1 }, "\u200B"),
-        "<a>second<b> paragraph",
-      ),
-    ) as TaggedNode;
-
-    // Delete from the end of the first paragraph to the
-    // beginning of the second
-    const step = replaceStep(
-      doc,
-      doc.tag["a"]!,
-      doc.tag["b"],
-      Slice.empty,
-    ) as ReplaceStep | null;
-
-    assert(step, "Could not create test ReplaceStep");
-
-    const editorState = EditorState.create({
-      doc,
-      selection: new TextSelection(
-        doc.resolve(doc.tag["b"]!),
-        doc.resolve(doc.tag["b"]!),
-      ),
-    });
-
-    const originalTransaction = editorState.tr;
-    originalTransaction.step(step);
-
-    const trackedTransaction = editorState.tr;
-    suggestReplaceStep(trackedTransaction, editorState, doc, step, [], 1);
-
-    const trackedState = editorState.apply(trackedTransaction);
-
-    const expected = testBuilders.doc(
-      testBuilders.paragraph(
-        "first paragraph",
-        testBuilders.deletion({ id: 1 }, "\u200B"),
-      ),
-      testBuilders.paragraph(
-        testBuilders.deletion({ id: 1 }, "second"),
-        " paragraph",
-      ),
+      testBuilders.paragraph("second paragraph"),
     );
 
     assert(
@@ -720,14 +664,11 @@ describe("ReplaceStep", () => {
     const trackedState = editorState.apply(trackedTransaction);
 
     const expected = testBuilders.doc(
-      testBuilders.paragraph(
-        "first ",
-        testBuilders.insertion({ id: 1 }, "\u200B"),
+      testBuilders.blockBoundarySuggestion(
+        { id: 1, type: "insertion" },
+        testBuilders.paragraph("first "),
       ),
-      testBuilders.paragraph(
-        testBuilders.insertion({ id: 1 }, "\u200B"),
-        "paragraph",
-      ),
+      testBuilders.paragraph("paragraph"),
       testBuilders.paragraph("second paragraph"),
     );
 

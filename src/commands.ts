@@ -29,6 +29,7 @@ function applySuggestionsToTransform(
   from?: number,
   to?: number,
 ) {
+  const { blockBoundarySuggestion } = getSuggestionMarks(node.type.schema);
   const toApplyIsInSet =
     suggestionId === undefined
       ? (marks: readonly Mark[]) => markTypeToApply.isInSet(marks)
@@ -103,6 +104,26 @@ function applySuggestionsToTransform(
     } else {
       tr.removeNodeMark(insertionFrom, markTypeToApply);
     }
+    return true;
+  });
+
+  // Second pass to join on any deleted block boundaries
+  node.descendants((child, pos) => {
+    const boundarySuggestion = blockBoundarySuggestion.isInSet(child.marks);
+
+    if (!boundarySuggestion) return true;
+
+    const joinPoint = pos + child.nodeSize;
+
+    if (from !== undefined && joinPoint < from) return true;
+    if (to !== undefined && joinPoint > to) return true;
+
+    if (boundarySuggestion.attrs["type"] === markTypeToRevert.name) {
+      tr.join(pos + child.nodeSize);
+    }
+
+    tr.removeNodeMark(pos, boundarySuggestion);
+
     return true;
   });
 }

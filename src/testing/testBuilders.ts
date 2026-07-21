@@ -13,7 +13,11 @@ const schema = new Schema({
   nodes: {
     ...nodes,
     image: { ...nodes.image, group: "block", inline: false },
-    doc: { ...nodes.doc, marks: "difficulty insertion deletion modification" },
+    doc: {
+      ...nodes.doc,
+      marks:
+        "difficulty insertion deletion modification blockBoundarySuggestion",
+    },
     orderedList: { ...orderedList, group: "block", content: "listItem+" },
     bulletList: { ...bulletList, group: "block", content: "listItem+" },
     listItem: { ...listItem, content: "block+" },

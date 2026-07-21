@@ -26,6 +26,7 @@
     "**/.pre-commit-config.yaml"
   ],
   "rules": {
+    "no-console": ["error", { "allow": ["error"] }],
     "constructor-super": "error",
     "for-direction": "error",
     "getter-return": "error",

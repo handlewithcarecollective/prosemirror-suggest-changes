@@ -64,43 +64,16 @@ export const insertion: MarkSpec = {
 };
 
 export interface BoundarySuggestion {
-  startId: string | number | null;
-  endId: string | number | null;
-  startType: SuggestionType | null;
-  endType: SuggestionType | null;
+  id: string | number | null;
+  type: SuggestionType | null;
 }
 
 export const blockBoundarySuggestion: MarkSpec = {
   inclusive: false,
   attrs: {
-    startId: { validate: `${suggestionIdValidate}|null`, default: null },
-    endId: { validate: `${suggestionIdValidate}|null`, default: null },
-    startType: {
-      validate: (value) => {
-        const error = new RangeError(
-          `Expected "insertion" "deletion" or null for attribute startType on type blockBoundarySuggestion, got ${JSON.stringify(value)}`,
-        );
-        if (typeof value !== "string" && value !== null) {
-          throw error;
-        }
-        if (value !== "insertion" && value !== "deletion" && value !== null) {
-          throw error;
-        }
-      },
-      default: null,
-    },
-    endType: {
-      validate: (value) => {
-        const error = new RangeError(
-          `Expected "insertion" "deletion" or null for attribute endType on type blockBoundarySuggestion, got ${JSON.stringify(value)}`,
-        );
-        if (typeof value !== "string" && value !== null) {
-          throw error;
-        }
-        if (value !== "insertion" && value !== "deletion" && value !== null) {
-          throw error;
-        }
-      },
+    id: { validate: `${suggestionIdValidate}|null`, default: null },
+    type: {
+      validate: "string|null",
       default: null,
     },
   },
@@ -109,13 +82,9 @@ export const blockBoundarySuggestion: MarkSpec = {
       inline ? "span" : "div",
       {
         "data-type": "block-boundary-suggestion",
-        "data-start-id": JSON.stringify(mark.attrs["startId"]),
-        "data-end-id": JSON.stringify(mark.attrs["endId"]),
-        ...(mark.attrs["startType"] && {
-          "data-start-type": mark.attrs["startType"] as SuggestionType,
-        }),
+        "data-id": JSON.stringify(mark.attrs["id"]),
         ...(mark.attrs["endType"] && {
-          "data-end-type": mark.attrs["endType"] as SuggestionType,
+          "data-change-type": mark.attrs["type"] as SuggestionType,
         }),
       },
       0,
@@ -125,26 +94,22 @@ export const blockBoundarySuggestion: MarkSpec = {
     {
       tag: "span[data-type='block-boundary-suggestion']",
       getAttrs(node) {
-        if (!node.dataset["startId"] && !node.dataset["endId"]) return false;
+        if (!node.dataset["id"]) return false;
 
         return {
-          startId: node.dataset["startId"] ?? null,
-          endId: node.dataset["endId"] ?? null,
-          startType: node.dataset["startType"] ?? null,
-          endType: node.dataset["endType"] ?? null,
+          id: node.dataset["id"] ?? null,
+          type: node.dataset["changeType"] ?? null,
         };
       },
     },
     {
       tag: "div[data-type='block-boundary-suggestion']",
       getAttrs(node) {
-        if (!node.dataset["startId"] && !node.dataset["endId"]) return false;
+        if (!node.dataset["id"]) return false;
 
         return {
-          startId: node.dataset["startId"] ?? null,
-          endId: node.dataset["endId"] ?? null,
-          startType: node.dataset["startType"] ?? null,
-          endType: node.dataset["endType"] ?? null,
+          id: node.dataset["id"] ?? null,
+          type: node.dataset["changeType"] ?? null,
         };
       },
     },
@@ -207,7 +172,10 @@ export const modification: MarkSpec = {
  */
 export function addSuggestionMarks<Marks extends string>(
   marks: Record<Marks, MarkSpec>,
-): Record<Marks | "deletion" | "insertion" | "modification", MarkSpec> {
+): Record<
+  Marks | "deletion" | "insertion" | "modification" | "blockBoundarySuggestion",
+  MarkSpec
+> {
   return {
     ...marks,
     deletion,

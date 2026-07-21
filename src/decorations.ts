@@ -42,20 +42,18 @@ export function getSuggestionDecorations(state: EditorState): DecorationSource {
 
     if (!boundarySuggestion) return true;
 
-    if (boundarySuggestion.endType && boundarySuggestion.endId) {
+    if (boundarySuggestion.type && boundarySuggestion.id) {
       const markType =
-        boundarySuggestion.endType === "insertion" ? insertion : deletion;
-
-      console.log(boundarySuggestion);
+        boundarySuggestion.type === "insertion" ? insertion : deletion;
 
       changeDecorations.push(
         Decoration.widget(pos + node.nodeSize - 1, pilcrow, {
           key:
-            typeof boundarySuggestion.endId === "number"
-              ? boundarySuggestion.endId.toString()
-              : boundarySuggestion.endId,
+            typeof boundarySuggestion.id === "number"
+              ? boundarySuggestion.id.toString()
+              : boundarySuggestion.id,
 
-          marks: [markType.create({ id: boundarySuggestion.endId })],
+          marks: [markType.create({ id: boundarySuggestion.id })],
         }),
       );
     }
