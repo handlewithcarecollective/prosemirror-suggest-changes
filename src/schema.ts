@@ -1,6 +1,8 @@
 import { type MarkSpec } from "prosemirror-model";
 import { type SuggestionId, suggestionIdValidate } from "./generateId.js";
 
+export type SuggestionType = "insertion" | "deletion";
+
 export const deletion: MarkSpec = {
   inclusive: false,
   excludes: "insertion modification deletion",
@@ -61,6 +63,59 @@ export const insertion: MarkSpec = {
   ],
 };
 
+export interface BoundarySuggestion {
+  id: string | number | null;
+  type: SuggestionType | null;
+}
+
+export const blockBoundarySuggestion: MarkSpec = {
+  inclusive: false,
+  attrs: {
+    id: { validate: `${suggestionIdValidate}|null`, default: null },
+    type: {
+      validate: "string|null",
+      default: null,
+    },
+  },
+  toDOM(mark, inline) {
+    return [
+      inline ? "span" : "div",
+      {
+        "data-type": "block-boundary-suggestion",
+        "data-id": JSON.stringify(mark.attrs["id"]),
+        ...(mark.attrs["endType"] && {
+          "data-change-type": mark.attrs["type"] as SuggestionType,
+        }),
+      },
+      0,
+    ];
+  },
+  parseDOM: [
+    {
+      tag: "span[data-type='block-boundary-suggestion']",
+      getAttrs(node) {
+        if (!node.dataset["id"]) return false;
+
+        return {
+          id: node.dataset["id"] ?? null,
+          type: node.dataset["changeType"] ?? null,
+        };
+      },
+    },
+    {
+      tag: "div[data-type='block-boundary-suggestion']",
+      getAttrs(node) {
+        if (!node.dataset["id"]) return false;
+
+        return {
+          id: node.dataset["id"] ?? null,
+          type: node.dataset["changeType"] ?? null,
+        };
+      },
+    },
+  ],
+};
+
 export const modification: MarkSpec = {
   inclusive: false,
   excludes: "deletion insertion",
@@ -79,7 +134,6 @@ export const modification: MarkSpec = {
         "data-id": JSON.stringify(mark.attrs["id"]),
         "data-mod-type": mark.attrs["type"] as string,
         "data-mod-prev-val": JSON.stringify(mark.attrs["previousValue"]),
-        // TODO: Try to serialize marks with toJSON?
         "data-mod-new-val": JSON.stringify(mark.attrs["newValue"]),
       },
       0,
@@ -118,11 +172,15 @@ export const modification: MarkSpec = {
  */
 export function addSuggestionMarks<Marks extends string>(
   marks: Record<Marks, MarkSpec>,
-): Record<Marks | "deletion" | "insertion" | "modification", MarkSpec> {
+): Record<
+  Marks | "deletion" | "insertion" | "modification" | "blockBoundarySuggestion",
+  MarkSpec
+> {
   return {
     ...marks,
     deletion,
     insertion,
     modification,
+    blockBoundarySuggestion,
   };
 }

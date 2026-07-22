@@ -1,11 +1,11 @@
-import type { Node } from "prosemirror-model";
-import type { EditorState } from "prosemirror-state";
+import { Selection, type EditorState } from "prosemirror-state";
 import {
   Decoration,
   DecorationSet,
   type DecorationSource,
 } from "prosemirror-view";
 import { getSuggestionMarks } from "./utils.js";
+import { type BoundarySuggestion } from "./schema.js";
 
 function pilcrow() {
   const span = document.createElement("span");
@@ -14,13 +14,13 @@ function pilcrow() {
 }
 
 export function getSuggestionDecorations(state: EditorState): DecorationSource {
-  const { deletion, insertion } = getSuggestionMarks(state.schema);
+  const { deletion, insertion, blockBoundarySuggestion } = getSuggestionMarks(
+    state.schema,
+  );
 
+  const widgetPositions = new Set<number>();
   const changeDecorations: Decoration[] = [];
-  let lastParentNode: Node | null = null;
-  let lastTextNode: Node | null = null;
-  let lastTextNodeEndPos = 0;
-  state.doc.descendants((node, pos, parent) => {
+  state.doc.descendants((node, pos) => {
     if (node.isTextblock && node.childCount) {
       if (node.children.every((child) => deletion.isInSet(child.marks))) {
         changeDecorations.push(
@@ -37,65 +37,35 @@ export function getSuggestionDecorations(state: EditorState): DecorationSource {
         );
       }
     }
-    if (node.type.name !== "text") return true;
-    const currentDeletionMark = node.marks.find(
-      (mark) => mark.type === deletion,
-    );
-    const currentInsertionMark = node.marks.find(
-      (mark) => mark.type === insertion,
-    );
 
-    const lastDeletionMark = lastTextNode?.marks.find(
-      (mark) => mark.type === deletion,
-    );
-    const lastInsertionMark = lastTextNode?.marks.find(
-      (mark) => mark.type === insertion,
-    );
-    const widgetPos = lastTextNodeEndPos;
-    lastTextNode = node;
-    lastTextNodeEndPos = pos + node.nodeSize;
-    if (parent === lastParentNode) {
-      lastParentNode = parent;
-      return true;
-    }
-    lastParentNode = parent;
-    if (
-      (!currentDeletionMark || !lastDeletionMark) &&
-      (!currentInsertionMark || !lastInsertionMark)
-    ) {
-      return true;
-    }
-    if (
-      currentDeletionMark?.attrs["id"] !== lastDeletionMark?.attrs["id"] &&
-      currentInsertionMark?.attrs["id"] !== lastInsertionMark?.attrs["id"]
-    ) {
-      return true;
-    }
-    if (currentDeletionMark) {
+    const boundarySuggestion = blockBoundarySuggestion.isInSet(node.marks)
+      ?.attrs as BoundarySuggestion | undefined;
+
+    if (!boundarySuggestion) return true;
+
+    if (boundarySuggestion.type && boundarySuggestion.id) {
+      const markType =
+        boundarySuggestion.type === "insertion" ? insertion : deletion;
+
+      const widgetPos = Selection.near(
+        state.doc.resolve(pos + node.nodeSize),
+        -1,
+      ).from;
+
+      if (widgetPositions.has(widgetPos)) {
+        return true;
+      }
+
+      widgetPositions.add(widgetPos);
+
       changeDecorations.push(
         Decoration.widget(widgetPos, pilcrow, {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          key: currentDeletionMark.attrs["id"],
-          marks: [
-            deletion.create({
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-              id: currentDeletionMark.attrs["id"],
-            }),
-          ],
-        }),
-      );
-    }
-    if (currentInsertionMark) {
-      changeDecorations.push(
-        Decoration.widget(widgetPos, pilcrow, {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          key: currentInsertionMark.attrs["id"],
-          marks: [
-            insertion.create({
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-              id: currentInsertionMark.attrs["id"],
-            }),
-          ],
+          key:
+            typeof boundarySuggestion.id === "number"
+              ? boundarySuggestion.id.toString()
+              : boundarySuggestion.id,
+
+          marks: [markType.create({ id: boundarySuggestion.id })],
         }),
       );
     }

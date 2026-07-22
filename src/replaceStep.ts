@@ -8,8 +8,13 @@ import { type ReplaceStep, type Step } from "prosemirror-transform";
 
 import { findSuggestionMarkEnd } from "./findSuggestionMarkEnd.js";
 import { rebasePos } from "./rebasePos.js";
-import { getSuggestionMarks } from "./utils.js";
+import {
+  findBlockAncestor,
+  getSuggestionMarks,
+  beforesInBlockRange,
+} from "./utils.js";
 import { type SuggestionId } from "./generateId.js";
+import { type BoundarySuggestion } from "./schema.js";
 
 /**
  * Transform a replace step into its equivalent tracked steps.
@@ -49,7 +54,9 @@ export function suggestReplaceStep(
   prevSteps: Step[],
   suggestionId: SuggestionId,
 ) {
-  const { deletion, insertion } = getSuggestionMarks(state.schema);
+  const { deletion, insertion, blockBoundarySuggestion } = getSuggestionMarks(
+    state.schema,
+  );
 
   // Check for insertion and deletion marks directly
   // adjacent to this step's boundaries. If they exist,
@@ -113,74 +120,52 @@ export function suggestReplaceStep(
   // can leave zero-width spaces as markers if there's no other
   // content to anchor the deletion to.
   if (stepFrom !== stepTo) {
-    let $stepFrom = trackedTransaction.doc.resolve(stepFrom);
-    let $stepTo = trackedTransaction.doc.resolve(stepTo);
-    // When there are no characters to mark with deletions before
-    // the end of a block, we add zero-width, non-printable
-    // characters as markers to indicate that a deletion exists
-    // and crosses a block boundary. This allows us to render the
-    // deleted boundary with a widget, as well as properly handle
-    // future, adjacent deletions and insertions.
+    const $stepFrom = trackedTransaction.doc.resolve(stepFrom);
+    const $stepTo = trackedTransaction.doc.resolve(stepTo);
+    const blockRange = $stepFrom.blockRange($stepTo);
     if (
-      !$stepFrom.nodeAfter &&
-      !deletion.isInSet($stepFrom.nodeBefore?.marks ?? [])
+      blockRange &&
+      $stepFrom.node(blockRange.depth + 1) !==
+        $stepTo.node(blockRange.depth + 1)
     ) {
-      trackedTransaction.insertText("\u200B", stepFrom);
-      stepTo++;
-      $stepTo = trackedTransaction.doc.resolve(stepTo);
-    }
+      const startsToMark = beforesInBlockRange($stepFrom, blockRange);
 
-    if (
-      !$stepTo.nodeBefore &&
-      !deletion.isInSet($stepTo.nodeAfter?.marks ?? [])
-    ) {
-      trackedTransaction.insertText("\u200B", stepTo);
-      stepTo++;
-      $stepTo = trackedTransaction.doc.resolve(stepTo);
-    }
+      for (const stepFromBlockStart of startsToMark) {
+        const stepFromBlockBoundarySuggestion = blockBoundarySuggestion.isInSet(
+          trackedTransaction.doc.nodeAt(stepFromBlockStart)?.marks ?? [],
+        )?.attrs as BoundarySuggestion | undefined;
 
-    // When we produce a deletion mark that directly abuts
-    // an existing mark with a zero-width space, we delete
-    // that space. We'll join the marks later, and can use
-    // the joined marks to find deletions across the block
-    // boundary
-    if (
-      $stepFrom.nodeBefore?.text?.endsWith("\u200B") &&
-      !$stepTo.nodeAfter?.text?.startsWith("\u200B")
-    ) {
-      trackedTransaction.delete(stepFrom - 1, stepFrom);
-      stepFrom--;
-      stepTo--;
-      $stepFrom = trackedTransaction.doc.resolve(stepFrom);
-      $stepTo = trackedTransaction.doc.resolve(stepTo);
-    }
+        // When a deletion crosses a block boundary, we add
+        // a blockBoundarySuggestion mark to the previous
+        // block. This allows us to render the
+        // deleted boundary with a widget, as well as properly handle
+        // future, adjacent deletions and insertions.
+        if (stepFromBlockBoundarySuggestion?.type !== "insertion") {
+          trackedTransaction.addNodeMark(
+            stepFromBlockStart,
+            blockBoundarySuggestion.create({
+              id: markId,
+              type: deletion.name,
+            }),
+          );
+        } else {
+          trackedTransaction.removeNodeMark(
+            stepFromBlockStart,
+            blockBoundarySuggestion,
+          );
 
-    if (
-      $stepTo.nodeAfter?.text?.startsWith("\u200B") &&
-      !$stepFrom.nodeBefore?.text?.endsWith("\u200B")
-    ) {
-      trackedTransaction.delete(stepTo, stepTo + 1);
-    }
-
-    // If the user is deleting exactly a zero-width space,
-    // delete the space and also shift the range back by one,
-    // so that they actually mark the character before the
-    // zero-width space as deleted. The user doesn't know
-    // the zero-width space is there, so deleting it would
-    // appear to do nothing
-    if (
-      $stepFrom.nodeBefore &&
-      stepTo - stepFrom === 1 &&
-      trackedTransaction.doc.textBetween(stepFrom, stepTo) === "\u200B"
-    ) {
-      trackedTransaction.delete(stepFrom, stepTo);
-      stepFrom--;
-      stepTo--;
-      $stepFrom = trackedTransaction.doc.resolve(stepFrom);
-      $stepTo = trackedTransaction.doc.resolve(stepTo);
-      trackedTransaction.setSelection(TextSelection.near($stepFrom));
+          trackedTransaction.join(
+            stepFromBlockStart +
+              // oxlint-disable-next-line typescript/no-non-null-assertion
+              trackedTransaction.doc.nodeAt(stepFromBlockStart)!.nodeSize,
+          );
+        }
+      }
     }
   }
+
+  stepFrom = rebasePos(step.from, prevSteps, trackedTransaction.steps);
+  stepTo = rebasePos(step.to, prevSteps, trackedTransaction.steps);
 
   // TODO: Even if the range doesn't map to a block
   // range, check whether it contains any whole
@@ -256,7 +241,7 @@ export function suggestReplaceStep(
     // Don't allow inserting content within an existing deletion
     // mark. Instead, shift the proposed insertion to the end
     // of the deletion.
-    const insertFrom = findSuggestionMarkEnd($to, deletion);
+    const insertFrom = findSuggestionMarkEnd($to, deletion, true);
 
     // We execute the insertion normally, on top of all of the existing
     // tracked changes.
@@ -265,7 +250,7 @@ export function suggestReplaceStep(
       // We just created this step, so it we can assert that it exists
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       trackedTransaction.steps[trackedTransaction.steps.length - 1]!;
-    let insertedTo = insertStep.getMap().map(insertFrom);
+    const insertedTo = insertStep.getMap().map(insertFrom);
 
     // Then, we iterate through the newly inserted content and mark it
     // as inserted.
@@ -297,31 +282,24 @@ export function suggestReplaceStep(
     });
 
     const $insertFrom = trackedTransaction.doc.resolve(insertFrom);
-    let $insertedTo = trackedTransaction.doc.resolve(insertedTo);
 
     // Like with deletions, identify when we've inserted a
-    // node boundary and add zero-width spaces as anchors on
-    // either side.
+    // node boundary and add block boundary suggestion marks.
     if (!$insertFrom.nodeAfter) {
-      trackedTransaction.insertText("\u200B", insertFrom);
-      trackedTransaction.addMark(
-        insertFrom,
-        insertFrom + 1,
-        insertion.create({ id: markId }),
-      );
-      insertedTo++;
-      $insertedTo = trackedTransaction.doc.resolve(insertedTo);
-    }
+      const insertFromTextblock = findBlockAncestor($insertFrom);
 
-    if (!$insertedTo.nodeBefore) {
-      trackedTransaction.insertText("\u200B", insertedTo);
-      trackedTransaction.addMark(
-        insertedTo,
-        insertedTo + 1,
-        insertion.create({ id: markId }),
+      const insertFromBlockBoundarySuggestion = blockBoundarySuggestion.isInSet(
+        trackedTransaction.doc.nodeAt(insertFromTextblock)?.marks ?? [],
+      )?.attrs;
+
+      trackedTransaction.addNodeMark(
+        insertFromTextblock,
+        blockBoundarySuggestion.create({
+          ...insertFromBlockBoundarySuggestion,
+          id: markId,
+          type: insertion.name,
+        }),
       );
-      insertedTo++;
-      $insertedTo = trackedTransaction.doc.resolve(insertedTo);
     }
 
     if (insertFrom !== $to.pos) {
@@ -332,5 +310,6 @@ export function suggestReplaceStep(
       );
     }
   }
+
   return markId === suggestionId;
 }

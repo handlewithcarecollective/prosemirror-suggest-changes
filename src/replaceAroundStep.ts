@@ -188,8 +188,8 @@ export function suggestReplaceAroundStep(
   if (!blockRange) return false;
   const replace = replaceStep(
     doc,
-    step.getMap().invert().map(blockRange.start),
-    step.getMap().invert().map(blockRange.end),
+    step.getMap().invert().map(blockRange.start, -1),
+    step.getMap().invert().map(blockRange.end, 1),
     applySuggestionsToRange(applied, blockRange.start, blockRange.end),
   );
   if (!replace) return false;

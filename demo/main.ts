@@ -39,23 +39,26 @@ export const schema = new Schema({
   nodes: {
     ...nodes,
     image: { ...nodes.image, group: "block", inline: false },
-    doc: { ...nodes.doc, marks: "insertion deletion modification" },
+    doc: {
+      ...nodes.doc,
+      marks: "insertion deletion modification blockBoundarySuggestion",
+    },
     ordered_list: {
       ...orderedList,
       group: "block",
       content: "list_item+",
-      marks: "insertion deletion modification",
+      marks: "insertion deletion modification blockBoundarySuggestion",
     },
     bullet_list: {
       ...bulletList,
       group: "block",
       content: "list_item+",
-      marks: "insertion deletion modification",
+      marks: "insertion deletion modification blockBoundarySuggestion",
     },
     list_item: {
       ...listItem,
       content: "block+",
-      marks: "insertion deletion modification",
+      marks: "insertion deletion modification blockBoundarySuggestion",
     },
   },
   marks: addSuggestionMarks(marks),

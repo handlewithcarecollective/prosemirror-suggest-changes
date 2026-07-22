@@ -1,55 +1,68 @@
 import { type MarkType, type ResolvedPos } from "prosemirror-model";
+import { getSuggestionMarks } from "./utils.js";
 
-export function findSuggestionMarkEnd($pos: ResolvedPos, markType: MarkType) {
-  const initialDeletionMark = ($pos.nodeAfter ?? $pos.nodeBefore)?.marks.find(
+export function findSuggestionMarkEnd(
+  $pos: ResolvedPos,
+  markType: MarkType,
+  crossBoundaries = false,
+) {
+  const { blockBoundarySuggestion } = getSuggestionMarks($pos.doc.type.schema);
+
+  const initialMark = ($pos.nodeAfter ?? $pos.nodeBefore)?.marks.find(
     (mark) => mark.type === markType,
   );
-  if (!initialDeletionMark) {
+
+  if (!initialMark) {
     return $pos.pos;
   }
-  let afterPos = $pos.pos + ($pos.nodeAfter?.nodeSize ?? 0);
-  // We always return from this while loop
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  let markEndPos = $pos.pos + ($pos.nodeAfter?.nodeSize ?? 0);
+
+  // oxlint-disable-next-line typescript/no-unnecessary-condition
   while (true) {
-    const $afterPos = $pos.doc.resolve(afterPos);
-    if (
-      $afterPos.depth < 1 ||
-      ($afterPos.nodeAfter && !markType.isInSet($afterPos.marks()))
-    ) {
-      return $afterPos.pos;
+    let $markEndPos = $pos.doc.resolve(markEndPos);
+    for (let i = $markEndPos.index(); i < $markEndPos.parent.childCount; i++) {
+      const sibling = $markEndPos.parent.child(i);
+      if (!markType.isInSet(sibling.marks)) return markEndPos;
+      markEndPos += sibling.nodeSize;
     }
 
-    // We're at the end of a node. We need to check
-    // whether there's a matching deletion at the beginning
-    // of the next node
-    let afterParentPos = $afterPos.after();
-    let $afterParentPos = $pos.doc.resolve(afterParentPos);
-    let nextParent = $afterParentPos.nodeAfter;
-    while ($afterParentPos.depth > 0 && !nextParent) {
-      afterParentPos = $afterPos.after($afterParentPos.depth);
-      $afterParentPos = $pos.doc.resolve(afterParentPos);
-      nextParent = $afterParentPos.nodeAfter;
-    }
+    $markEndPos = $pos.doc.resolve(markEndPos);
 
-    let cousinStartPos = afterParentPos + 1;
-    let cousin = nextParent?.firstChild;
-    while (cousin && !cousin.isLeaf && !markType.isInSet(cousin.marks)) {
-      cousin = cousin.firstChild;
-      cousinStartPos++;
-    }
+    if (!crossBoundaries) return markEndPos;
 
-    const deletionMark = cousin?.marks.find((mark) => mark.type === markType);
+    const parent = $markEndPos.parent;
+
+    const initialBoundarySuggestion = blockBoundarySuggestion.isInSet(
+      parent.marks,
+    );
 
     if (
-      !cousin ||
-      !deletionMark ||
-      deletionMark.attrs["id"] !== initialDeletionMark.attrs["id"]
+      !initialBoundarySuggestion ||
+      initialBoundarySuggestion.attrs["type"] !== markType.name
     ) {
-      return $afterPos.pos;
+      return markEndPos;
     }
 
-    const $cousinStartPos = $pos.doc.resolve(cousinStartPos);
-    afterPos = $cousinStartPos.pos + ($cousinStartPos.nodeAfter?.nodeSize ?? 0);
+    let d = $pos.depth;
+    while ($pos.index(d) === $pos.node(d).childCount - 1 && d > 0) {
+      d--;
+    }
+    const beforeNextBlock = $pos.after(d + 1);
+    let beforeCousin = beforeNextBlock + 1;
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
+    while (true) {
+      const $beforeCousin = $pos.doc.resolve(beforeCousin);
+      if (!$beforeCousin.nodeAfter || $beforeCousin.parentOffset) {
+        return markEndPos;
+      }
+      markEndPos = beforeCousin;
+      if (markType.isInSet($beforeCousin.nodeAfter.marks)) break;
+      beforeCousin++;
+    }
+
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const cousin = $pos.doc.nodeAt(beforeCousin)!;
+    markEndPos += cousin.nodeSize;
   }
 }
