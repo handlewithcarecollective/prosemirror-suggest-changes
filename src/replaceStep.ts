@@ -11,7 +11,7 @@ import { rebasePos } from "./rebasePos.js";
 import {
   findBlockAncestor,
   getSuggestionMarks,
-  startsInBlockRange,
+  beforesInBlockRange,
 } from "./utils.js";
 import { type SuggestionId } from "./generateId.js";
 import { type BoundarySuggestion } from "./schema.js";
@@ -128,7 +128,7 @@ export function suggestReplaceStep(
       $stepFrom.node(blockRange.depth + 1) !==
         $stepTo.node(blockRange.depth + 1)
     ) {
-      const startsToMark = startsInBlockRange($stepFrom, blockRange);
+      const startsToMark = beforesInBlockRange($stepFrom, blockRange);
 
       for (const stepFromBlockStart of startsToMark) {
         const stepFromBlockBoundarySuggestion = blockBoundarySuggestion.isInSet(
@@ -241,7 +241,7 @@ export function suggestReplaceStep(
     // Don't allow inserting content within an existing deletion
     // mark. Instead, shift the proposed insertion to the end
     // of the deletion.
-    const insertFrom = findSuggestionMarkEnd($to, deletion);
+    const insertFrom = findSuggestionMarkEnd($to, deletion, true);
 
     // We execute the insertion normally, on top of all of the existing
     // tracked changes.

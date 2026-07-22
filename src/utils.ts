@@ -56,19 +56,17 @@ export function findBlockAncestor($pos: ResolvedPos) {
   return d === 0 ? $pos.pos : $pos.before(d);
 }
 
-export function startsInBlockRange($pos: ResolvedPos, blockRange: NodeRange) {
+export function beforesInBlockRange($pos: ResolvedPos, blockRange: NodeRange) {
   let d = $pos.depth;
   while (!$pos.node(d).isBlock && d > 0) {
     d--;
   }
 
-  d--;
-
-  const starts: number[] = [];
-  while (d >= blockRange.depth) {
-    starts.push($pos.start(d));
+  const befores: number[] = [];
+  while (d > blockRange.depth) {
+    befores.push($pos.before(d));
     d--;
   }
 
-  return starts;
+  return befores;
 }
