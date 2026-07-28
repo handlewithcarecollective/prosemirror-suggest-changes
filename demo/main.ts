@@ -61,7 +61,16 @@ export const schema = new Schema({
       marks: "insertion deletion modification blockBoundarySuggestion",
     },
   },
-  marks: addSuggestionMarks(marks),
+  marks: addSuggestionMarks(marks, {
+    user: {
+      spec: {
+        default: "Alice",
+        validate: "string",
+      },
+      toDOM: (user: string) => ({ "data-user": user }),
+      parseDOM: (node) => node.dataset.user,
+    },
+  }),
 });
 
 const remarkProseMirrorOptions: RemarkProseMirrorOptions = {
@@ -104,28 +113,24 @@ some use cases to try out:
 You can also use the button above the editor to disable suggestions.
 `;
 
-const doc = await unified()
-  .use(remarkParse)
-  .use(remarkProseMirror, remarkProseMirrorOptions)
-  .process(content)
-  .then(({ result }) => result);
-
-const editorState = EditorState.create({
-  schema,
-  doc,
-  plugins: [
-    inputRules({
-      rules: [
-        wrappingInputRule(/^\s*([-+*])\s$/, schema.nodes.bullet_list),
-        wrappingInputRule(/^\s*([0-9]+\.)\s$/, schema.nodes.ordered_list),
-      ],
-    }),
-    history(),
-    suggestChanges(),
-  ],
-});
-
 const suggestChangesUiPlugin = new Plugin({
+  state: {
+    init() {
+      return "Alice";
+    },
+    apply(tr, value) {
+      if (!tr.getMeta("switch-user")) return value;
+
+      switch (value) {
+        case "Alice":
+          return "Bob";
+        case "Bob":
+          return "Charles";
+        default:
+          return "Alice";
+      }
+    },
+  },
   view(view) {
     const toggleButton = document.createElement("button");
     toggleButton.appendChild(document.createTextNode("Enable suggestions"));
@@ -134,6 +139,16 @@ const suggestChangesUiPlugin = new Plugin({
       toggleSuggestChanges(view.state, view.dispatch);
       view.focus();
     });
+
+    const switchUserButton = document.createElement("button");
+    switchUserButton.appendChild(document.createTextNode("Switch user"));
+    switchUserButton.addEventListener("click", () => {
+      view.dispatch(view.state.tr.setMeta("switch-user", true));
+      view.focus();
+    });
+
+    const togglesContainer = document.createElement("div");
+    togglesContainer.append(toggleButton, switchUserButton);
 
     const applyAllButton = document.createElement("button");
     applyAllButton.appendChild(document.createTextNode("Apply all"));
@@ -156,7 +171,7 @@ const suggestChangesUiPlugin = new Plugin({
 
     const container = document.createElement("div");
     container.classList.add("menu");
-    container.append(toggleButton, commandsContainer);
+    container.append(togglesContainer, commandsContainer);
 
     view.dom.parentElement?.prepend(container);
 
@@ -171,12 +186,39 @@ const suggestChangesUiPlugin = new Plugin({
             document.createTextNode("Enable suggestions"),
           );
         }
+
+        const user = suggestChangesUiPlugin.getState(view.state);
+        switchUserButton.replaceChildren(
+          document.createTextNode(`Switch user (${user ?? "Alice"})`),
+        );
       },
       destroy() {
         container.remove();
       },
     };
   },
+});
+
+const doc = await unified()
+  .use(remarkParse)
+  .use(remarkProseMirror, remarkProseMirrorOptions)
+  .process(content)
+  .then(({ result }) => result);
+
+const editorState = EditorState.create({
+  schema,
+  doc,
+  plugins: [
+    inputRules({
+      rules: [
+        wrappingInputRule(/^\s*([-+*])\s$/, schema.nodes.bullet_list),
+        wrappingInputRule(/^\s*([0-9]+\.)\s$/, schema.nodes.ordered_list),
+      ],
+    }),
+    history(),
+    suggestChanges(),
+    suggestChangesUiPlugin,
+  ],
 });
 
 const plugins = [
@@ -196,7 +238,6 @@ const plugins = [
     "Mod-Shift-z": redo,
     "Mod-y": redo,
   }),
-  suggestChangesUiPlugin,
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -205,7 +246,14 @@ const editorEl = document.getElementById("editor")!;
 const view = new EditorView(editorEl, {
   state: editorState,
   plugins,
-  dispatchTransaction: withSuggestChanges(),
+  dispatchTransaction: withSuggestChanges(
+    undefined,
+    undefined,
+    () => ({
+      user: suggestChangesUiPlugin.getState(view.state),
+    }),
+    (a, b) => a.user !== b.user,
+  ),
 });
 
 // eslint-disable-next-line @typescript-eslint/unbound-method

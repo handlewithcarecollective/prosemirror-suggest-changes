@@ -12,16 +12,29 @@
   max-width: 700px;
 }
 
-ins,
-[data-node-insertion] {
+[data-user="Alice"]:not([data-type="block-boundary-suggestion"]) {
   background-color: #baffdf;
   color: #00973c;
 }
 
-del,
-[data-node-deletion] {
+[data-user="Bob"]:not([data-type="block-boundary-suggestion"]) {
   color: #9f003e;
   background-color: #ffb7dc;
+}
+
+[data-user="Charles"]:not([data-type="block-boundary-suggestion"]) {
+  color: #be9000;
+  background-color: #fdf0c8;
+}
+
+ins,
+[data-node-insertion] {
+  text-decoration: underline;
+}
+
+del,
+[data-node-deletion] {
+  text-decoration: strikethrough;
 }
 
 .menu {
