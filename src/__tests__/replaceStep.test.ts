@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
-import { Fragment, Slice } from "prosemirror-model";
+import { Fragment, Schema, Slice } from "prosemirror-model";
 import { EditorState, TextSelection } from "prosemirror-state";
-import { eq } from "prosemirror-test-builder";
+import { builders, eq } from "prosemirror-test-builder";
 import { type ReplaceStep, replaceStep } from "prosemirror-transform";
 import { assert, describe, it } from "vitest";
 
 import { suggestReplaceStep } from "../replaceStep.js";
 
 import { type TaggedNode, testBuilders } from "../testing/testBuilders.js";
+import { addSuggestionMarks } from "../schema.js";
 
 describe("ReplaceStep", () => {
   it("should wrap an insertion in a mark", () => {
@@ -581,6 +582,150 @@ describe("ReplaceStep", () => {
         " paragraph",
       ),
     );
+
+    assert(
+      eq(trackedState.doc, expected),
+      `Expected ${trackedState.doc} to match ${expected}`,
+    );
+  });
+
+  it("should not reuse ids when joining is prevented", () => {
+    const schemaWithAuthors = new Schema({
+      nodes: testBuilders.schema.spec.nodes,
+      marks: addSuggestionMarks(testBuilders.schema.spec.marks.toObject(), {
+        author: {
+          spec: { default: null },
+          toDOM: (authorId: string) => ({
+            "data-author-id": authorId,
+          }),
+          parseDOM: (node) => node.dataset["authorId"],
+        },
+      }),
+    });
+
+    const customBuilders = builders(
+      schemaWithAuthors,
+    ) as unknown as typeof testBuilders;
+
+    const doc = customBuilders.doc(
+      customBuilders.paragraph(
+        "first<a> <b>",
+        customBuilders.deletion({ id: 1, author: "alice" }, "paragraph"),
+      ),
+    );
+
+    const step = replaceStep(
+      doc,
+      doc.tag["a"]!,
+      doc.tag["b"],
+      Slice.empty,
+    ) as ReplaceStep | null;
+
+    assert(step, "Could not create test ReplaceStep");
+
+    const editorState = EditorState.create({
+      doc,
+      selection: new TextSelection(
+        doc.resolve(doc.tag["b"]!),
+        doc.resolve(doc.tag["b"]!),
+      ),
+    });
+
+    const originalTransaction = editorState.tr;
+    originalTransaction.step(step);
+
+    const trackedTransaction = editorState.tr;
+    suggestReplaceStep(
+      trackedTransaction,
+      editorState,
+      doc,
+      step,
+      [],
+      2,
+      () => ({ author: "bob" }),
+      ({ author: a }, { author: b }) => a !== b,
+    );
+
+    const trackedState = editorState.apply(trackedTransaction);
+
+    const expected = customBuilders.doc(
+      customBuilders.paragraph(
+        "first",
+        customBuilders.deletion({ id: 2, author: "bob" }, " "),
+        customBuilders.deletion({ id: 1, author: "alice" }, "paragraph"),
+      ),
+    );
+
+    assert(
+      eq(trackedState.doc, expected),
+      `Expected ${trackedState.doc} to match ${expected}`,
+    );
+  });
+
+  it("should not join deletions that become adjacent and are prevented", () => {
+    const schemaWithAuthors = new Schema({
+      nodes: testBuilders.schema.spec.nodes,
+      marks: addSuggestionMarks(testBuilders.schema.spec.marks.toObject(), {
+        author: {
+          spec: { default: null },
+          toDOM: (authorId: string) => ({
+            "data-author-id": authorId,
+          }),
+          parseDOM: (node) => node.dataset["authorId"],
+        },
+      }),
+    });
+
+    const customBuilders = builders(
+      schemaWithAuthors,
+    ) as unknown as typeof testBuilders;
+
+    const doc = customBuilders.doc(
+      customBuilders.paragraph(
+        customBuilders.deletion({ id: 1, author: "alice" }, "in"),
+        "<a>it<b>",
+        customBuilders.deletion({ id: 2, author: "bob" }, "ial "),
+      ),
+    ) as TaggedNode;
+
+    // Attempt to insert text within the deletion
+    const step = replaceStep(
+      doc,
+      doc.tag["a"]!,
+      doc.tag["b"],
+      Slice.empty,
+    ) as ReplaceStep | null;
+
+    assert(step, "Could not create test ReplaceStep");
+
+    const editorState = EditorState.create({
+      doc,
+      selection: TextSelection.atEnd(doc),
+    });
+
+    const originalTransaction = editorState.tr;
+    originalTransaction.step(step);
+
+    const trackedTransaction = editorState.tr;
+    suggestReplaceStep(
+      trackedTransaction,
+      editorState,
+      doc,
+      step,
+      [],
+      3,
+      () => ({ author: "alice" }),
+      ({ author: a }, { author: b }) => a !== b,
+    );
+
+    const trackedState = editorState.apply(trackedTransaction);
+
+    const expected = customBuilders.doc(
+      customBuilders.paragraph(
+        customBuilders.deletion({ id: 1, author: "alice" }, "init"),
+        customBuilders.deletion({ id: 2, author: "bob" }, "ial "),
+      ),
+    ) as TaggedNode;
 
     assert(
       eq(trackedState.doc, expected),

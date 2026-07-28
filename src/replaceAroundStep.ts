@@ -1,4 +1,4 @@
-import { type Node } from "prosemirror-model";
+import { type Attrs, type Node } from "prosemirror-model";
 import { type EditorState, type Transaction } from "prosemirror-state";
 import {
   AddNodeMarkStep,
@@ -166,6 +166,8 @@ export function suggestReplaceAroundStep(
   step: ReplaceAroundStep,
   prevSteps: Step[],
   suggestionId: SuggestionId,
+  extraAttrs?: () => Attrs,
+  preventJoin?: (a: Attrs, b: Attrs) => boolean,
 ) {
   const handled = suggestSetNodeMarkup(
     trackedTransaction,
@@ -200,5 +202,7 @@ export function suggestReplaceAroundStep(
     replace as ReplaceStep,
     prevSteps,
     suggestionId,
+    extraAttrs,
+    preventJoin,
   );
 }

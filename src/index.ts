@@ -3,6 +3,8 @@ export {
   insertion,
   deletion,
   modification,
+  blockBoundarySuggestion,
+  type ExtraAttr,
 } from "./schema.js";
 
 export {
