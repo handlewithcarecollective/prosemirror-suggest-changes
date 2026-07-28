@@ -1,4 +1,4 @@
-import { type Node } from "prosemirror-model";
+import { type Attrs, type Node } from "prosemirror-model";
 import {
   type EditorState,
   TextSelection,
@@ -15,6 +15,8 @@ import {
 } from "./utils.js";
 import { type SuggestionId } from "./generateId.js";
 import { type BoundarySuggestion } from "./schema.js";
+
+type WritableAttrs = Record<string, unknown>;
 
 /**
  * Transform a replace step into its equivalent tracked steps.
@@ -53,6 +55,8 @@ export function suggestReplaceStep(
   step: ReplaceStep,
   prevSteps: Step[],
   suggestionId: SuggestionId,
+  createExtraAttrs?: () => Attrs,
+  preventJoin?: (a: Attrs, b: Attrs) => boolean,
 ) {
   const { deletion, insertion, blockBoundarySuggestion } = getSuggestionMarks(
     state.schema,
@@ -72,10 +76,18 @@ export function suggestReplaceStep(
       (mark) => mark.type === deletion || mark.type === insertion,
     ) ?? null;
 
-  const markId =
-    (markBefore?.attrs["id"] as SuggestionId | undefined) ??
-    (markAfter?.attrs["id"] as SuggestionId | undefined) ??
-    suggestionId;
+  const extraAttrs: WritableAttrs = createExtraAttrs?.() ?? {};
+
+  const useMarkBeforeId =
+    markBefore && !preventJoin?.(markBefore.attrs, extraAttrs);
+  const useMarkAfterId =
+    markAfter && !preventJoin?.(markAfter.attrs, extraAttrs);
+
+  const markId = useMarkBeforeId
+    ? (markBefore.attrs["id"] as SuggestionId)
+    : useMarkAfterId
+      ? (markAfter.attrs["id"] as SuggestionId)
+      : suggestionId;
 
   const insertedRanges: { from: number; to: number }[] = [];
   // Rebase this step's boundaries onto the newest doc
@@ -146,6 +158,7 @@ export function suggestReplaceStep(
             blockBoundarySuggestion.create({
               id: markId,
               type: deletion.name,
+              ...extraAttrs,
             }),
           );
         } else {
@@ -187,7 +200,7 @@ export function suggestReplaceStep(
     trackedTransaction.addMark(
       stepFrom,
       stepTo,
-      deletion.create({ id: markId }),
+      deletion.create({ id: markId, ...extraAttrs }),
     );
   } else {
     trackedTransaction.doc.nodesBetween(
@@ -195,7 +208,10 @@ export function suggestReplaceStep(
       blockRange.end,
       (_, pos) => {
         if (pos < blockRange.start) return true;
-        trackedTransaction.addNodeMark(pos, deletion.create({ id: markId }));
+        trackedTransaction.addNodeMark(
+          pos,
+          deletion.create({ id: markId, ...extraAttrs }),
+        );
         return false;
       },
     );
@@ -206,14 +222,18 @@ export function suggestReplaceStep(
 
   // Detect when a new mark directly abuts an existing mark with
   // a different id and merge them
-  if (nodeAfter && markAfter && markAfter.attrs["id"] !== markId) {
-    const $nodeAfterStart = trackedTransaction.doc.resolve(stepTo);
-    const nodeAfterEnd = $nodeAfterStart.pos + nodeAfter.nodeSize;
+  if (
+    nodeAfter &&
+    markAfter &&
+    markAfter.attrs["id"] !== markId &&
+    !preventJoin?.(markAfter.attrs, { id: markId, ...extraAttrs })
+  ) {
+    const nodeAfterEnd = stepTo + nodeAfter.nodeSize;
     trackedTransaction.removeMark(stepTo, nodeAfterEnd, markAfter.type);
     trackedTransaction.addMark(
       stepTo,
       nodeAfterEnd,
-      markAfter.type.create({ id: markId }),
+      markAfter.type.create({ id: markId, ...extraAttrs }),
     );
     if (markAfter.type === deletion) {
       const insertionNode =
@@ -228,7 +248,7 @@ export function suggestReplaceStep(
         trackedTransaction.addMark(
           nodeAfterEnd,
           insertionNodeEnd,
-          insertion.create({ id: markId }),
+          insertion.create({ id: markId, ...extraAttrs }),
         );
       }
     }
@@ -272,13 +292,16 @@ export function suggestReplaceStep(
         trackedTransaction.addMark(
           Math.max(pos, insertFrom),
           Math.min(pos + node.nodeSize, insertedTo),
-          insertion.create({ id: markId }),
+          insertion.create({ id: markId, ...extraAttrs }),
         );
         return;
       }
 
       // Use a node mark when an entire node was newly inserted.
-      trackedTransaction.addNodeMark(pos, insertion.create({ id: markId }));
+      trackedTransaction.addNodeMark(
+        pos,
+        insertion.create({ id: markId, ...extraAttrs }),
+      );
     });
 
     const $insertFrom = trackedTransaction.doc.resolve(insertFrom);
@@ -298,6 +321,7 @@ export function suggestReplaceStep(
           ...insertFromBlockBoundarySuggestion,
           id: markId,
           type: insertion.name,
+          ...extraAttrs,
         }),
       );
     }

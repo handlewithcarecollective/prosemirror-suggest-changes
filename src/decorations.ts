@@ -58,6 +58,8 @@ export function getSuggestionDecorations(state: EditorState): DecorationSource {
 
       widgetPositions.add(widgetPos);
 
+      const { type: _, ...markAttrs } = boundarySuggestion;
+
       changeDecorations.push(
         Decoration.widget(widgetPos, pilcrow, {
           key:
@@ -65,7 +67,7 @@ export function getSuggestionDecorations(state: EditorState): DecorationSource {
               ? boundarySuggestion.id.toString()
               : boundarySuggestion.id,
 
-          marks: [markType.create({ id: boundarySuggestion.id })],
+          marks: [markType.create(markAttrs)],
         }),
       );
     }

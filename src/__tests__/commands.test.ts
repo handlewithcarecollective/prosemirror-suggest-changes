@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 
-import { Schema, type MarkSpec } from "prosemirror-model";
+import { Schema } from "prosemirror-model";
 import { EditorState } from "prosemirror-state";
 import { builders, eq } from "prosemirror-test-builder";
 import { assert, describe, it } from "vitest";
@@ -11,12 +11,7 @@ import {
   revertSuggestion,
   revertSuggestions,
 } from "../commands.js";
-import {
-  blockBoundarySuggestion,
-  deletion,
-  insertion,
-  modification,
-} from "../schema.js";
+import { addSuggestionMarks } from "../schema.js";
 import { testBuilders } from "../testing/testBuilders.js";
 
 describe("applyTrackedChanges", () => {
@@ -250,32 +245,24 @@ describe("applyTrackedChange", () => {
   });
 
   it("should match suggestion marks even when they include extra attrs", async () => {
-    const insertionWithAuthor: MarkSpec = {
-      ...insertion,
-      attrs: {
-        ...insertion.attrs,
-        author: { default: null },
-      },
-    };
-    const deletionWithAuthor: MarkSpec = {
-      ...deletion,
-      attrs: {
-        ...deletion.attrs,
-        author: { default: null },
-      },
-    };
     const schemaWithAuthors = new Schema({
       nodes: {
         doc: { content: "block+" },
         paragraph: { content: "inline*", group: "block" },
         text: { group: "inline" },
       },
-      marks: {
-        insertion: insertionWithAuthor,
-        deletion: deletionWithAuthor,
-        modification,
-        blockBoundarySuggestion,
-      },
+      marks: addSuggestionMarks(
+        {},
+        {
+          author: {
+            spec: { default: null },
+            toDOM: (authorId: string) => ({
+              "data-author-id": authorId,
+            }),
+            parseDOM: (node) => node.dataset["authorId"],
+          },
+        },
+      ),
     });
     const customBuilders = builders(schemaWithAuthors);
 

@@ -1,4 +1,4 @@
-import { type Schema, type Node } from "prosemirror-model";
+import { type Schema, type Node, type Attrs } from "prosemirror-model";
 import { type EditorState, type Transaction } from "prosemirror-state";
 import {
   AddMarkStep,
@@ -30,6 +30,8 @@ type StepHandler<S extends Step> = (
   step: S,
   prevSteps: Step[],
   suggestionId: SuggestionId,
+  extraAttrs?: () => Attrs,
+  preventJoin?: (a: Attrs, b: Attrs) => boolean,
 ) => boolean;
 
 function getStepHandler<S extends Step>(step: S): StepHandler<S> {
@@ -98,6 +100,8 @@ export function transformToSuggestionTransaction(
   originalTransaction: Transaction,
   state: EditorState,
   generateId?: (schema: Schema, doc?: Node) => SuggestionId,
+  extraAttrs?: () => Attrs,
+  preventJoin?: (a: Attrs, b: Attrs) => boolean,
 ) {
   getSuggestionMarks(state.schema);
 
@@ -124,6 +128,8 @@ export function transformToSuggestionTransaction(
         step,
         originalTransaction.steps.slice(0, i),
         suggestionId,
+        extraAttrs,
+        preventJoin,
       ) &&
       i < originalTransaction.steps.length - 1
     ) {
@@ -184,6 +190,8 @@ export function transformToSuggestionTransaction(
 export function withSuggestChanges(
   dispatchTransaction?: EditorView["dispatch"],
   generateId?: (schema: Schema, doc?: Node) => SuggestionId,
+  extraAttrs?: () => Attrs,
+  preventJoin?: (a: Attrs, b: Attrs) => boolean,
 ): EditorView["dispatch"] {
   const dispatch =
     dispatchTransaction ??
@@ -204,7 +212,13 @@ export function withSuggestChanges(
       !ySyncMeta.isUndoRedoOperation &&
       !ySyncMeta.isChangeOrigin &&
       !("skip" in (tr.getMeta(suggestChangesKey) ?? {}))
-        ? transformToSuggestionTransaction(tr, this.state, generateId)
+        ? transformToSuggestionTransaction(
+            tr,
+            this.state,
+            generateId,
+            extraAttrs,
+            preventJoin,
+          )
         : tr;
     dispatch.call(this, transaction);
   };

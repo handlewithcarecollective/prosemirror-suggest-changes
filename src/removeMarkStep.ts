@@ -1,4 +1,4 @@
-import { type Node } from "prosemirror-model";
+import { type Attrs, type Node } from "prosemirror-model";
 import { type EditorState, type Transaction } from "prosemirror-state";
 import {
   type RemoveMarkStep,
@@ -25,6 +25,8 @@ export function suggestRemoveMarkStep(
   step: RemoveMarkStep,
   prevSteps: Step[],
   suggestionId: SuggestionId,
+  extraAttrs?: () => Attrs,
+  preventJoin?: (a: Attrs, b: Attrs) => boolean,
 ) {
   const applied = step.apply(doc).doc;
   if (!applied) return false;
@@ -41,5 +43,7 @@ export function suggestRemoveMarkStep(
     replace as ReplaceStep,
     prevSteps,
     suggestionId,
+    extraAttrs,
+    preventJoin,
   );
 }
