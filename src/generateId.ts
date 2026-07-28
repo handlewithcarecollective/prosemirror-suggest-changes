@@ -14,20 +14,25 @@ export function parseSuggestionId(id: string): SuggestionId {
 }
 
 export function generateNextNumberId(schema: Schema, doc?: Node) {
-  const { deletion, insertion, modification } = getSuggestionMarks(schema);
+  const { deletion, insertion, modification, blockBoundarySuggestion } =
+    getSuggestionMarks(schema);
   // Find the highest change id in the document so far,
   // and use that as the starting point for new changes
   let suggestionId = 0;
   doc?.descendants((node) => {
-    const mark = node.marks.find(
+    const marks = node.marks.filter(
       (mark) =>
         mark.type === insertion ||
         mark.type === deletion ||
-        mark.type === modification,
+        mark.type === modification ||
+        mark.type === blockBoundarySuggestion,
     );
-    if (mark) {
-      suggestionId = Math.max(suggestionId, mark.attrs["id"] as number);
-      return false;
+    if (marks.length) {
+      suggestionId = Math.max(
+        suggestionId,
+        ...marks.map((mark) => mark.attrs["id"] as number),
+      );
+      return true;
     }
     return true;
   });
