@@ -26,11 +26,14 @@ yarn add @handlewithcare/prosemirror-suggest-changes prosemirror-view prosemirro
 
 - [Usage](#usage)
 - [How it works](#how-it-works)
+- [Discriminating suggestions](#discriminating-suggestions)
 - [API](#api)
   - [Schema](#schema)
     - [`insertion`](#insertion)
     - [`deletion`](#deletion)
     - [`modification`](#modification)
+    - [`blockBoundarySuggestion`](#blockboundarysuggestion)
+    - [`ExtraAttr`](#extraattr)
     - [`addSuggestionMarks`](#addsuggestionmarks)
   - [Commands](#commands)
     - [`selectSuggestion`](#selectsuggestion)
@@ -49,6 +52,7 @@ yarn add @handlewithcare/prosemirror-suggest-changes prosemirror-view prosemirro
     - [`isSuggestChangesEnabled`](#issuggestchangesenabled)
   - [`dispatchTransaction` Decorator](#dispatchtransaction-decorator)
     - [`withSuggestChanges`](#withsuggestchanges)
+- [Sponsors](#sponsors)
 
 <!-- tocstop -->
 
@@ -173,7 +177,7 @@ const suggestChangesViewPlugin = new Plugin({
 
 ## How it works
 
-This library provides three mark types:
+This library provides four mark types:
 
 - `insertion` represents newly inserted content, including new text content and
   new block nodes
@@ -181,15 +185,17 @@ This library provides three mark types:
   block nodes
 - `modification` represents nodes whose marks or attrs have changed, but whose
   content has not changed
+- `blockBoundarySuggestion` represents a suggestion to insert or delete a block
+  boundary, like splitting a paragraph or joining two list items
 
 Additionally, this library provides:
 
 - A plugin, which keeps track of whether suggestions are enabled or not
 - A decoration set factory, which renders pilcrows (¶) to make it clear to users
-  when block nodes have been deleted or inserted
+  when block boundaries have been deleted or inserted
 - A set of commands (`applySuggestions`, `revertSuggestions`, `applySuggestion`,
-  etc), for working with suggestions
-- A "`dispatchTransaction` decorator", `withSuggestChanges`
+  etc.), for working with suggestions
+- A “`dispatchTransaction` decorator”, `withSuggestChanges`
 
 `withSuggestChanges` is a function that optionally takes a `dispatchTransaction`
 function and returns a decorated `dispatchTransaction` function. This decorated
@@ -218,6 +224,73 @@ const view = new EditorView(editorEl, {
 });
 ```
 
+## Discriminating suggestions
+
+By default, suggestions are joined automatically with adjacent suggestions to
+keep the document structure simple. If you are working in a multi-user context,
+you may wish to keep suggestions from one user distinct from suggestions from
+another user.
+
+To do this, you can add extra attributes that identify your users when creating
+a suggestion mark, and provide a `preventJoin` method to determine when two
+adjacent suggestions should be prevented from joining. For example:
+
+```ts
+import {
+  withSuggestChanges,
+  getSuggestionDecorations,
+  addSuggestionMarks,
+  suggestChanges,
+} from "@handlewithcare/prosemirror-suggest-changes";
+
+export const schema = new Schema({
+  nodes: {
+    ...nodes,
+    doc: {
+      ...nodes.doc,
+      marks: "insertion modification deletion",
+    },
+  },
+  marks: addSuggestionMarks(marks, {
+    // You can specify extra attrs to add to each mark type.
+    // For each extra attr, provide a spec, toDOM, and parseDOM
+    userId: {
+      spec: {
+        default: null,
+        validate: "string",
+      },
+      toDOM: (userId: string) => ({
+        "data-user-id": userId,
+      }),
+      parseDOM: (node) => node.dataset["userId"],
+    },
+  }),
+});
+
+const editorState = EditorState.create({
+  schema,
+  doc,
+  plugins: [suggestChanges()],
+});
+
+const editorEl = document.getElementById("editor")!;
+
+const view = new EditorView(editorEl, {
+  state: editorState,
+  decorations: getSuggestionDecorations,
+  dispatchTransaction: withSuggestChanges(
+    // dispatchTransaction: defaults to the default view.dispatchTransaction
+    undefined,
+    // generateId: defaults to an auto-incrementing number
+    undefined,
+    // Your extra userId attr, from your application state
+    () => ({ userId: user.id }),
+    // preventJoin: Prevent joining suggestions from different users
+    (a, b) => a["userId"] !== b["userId"],
+  ),
+});
+```
+
 ## API
 
 ### Schema
@@ -228,7 +301,7 @@ Represents newly inserted content, including new text content and new block
 nodes
 
 ```ts
-const insertion: MarkSpec;
+function insertion(extraAttrs: Record<string, ExtraAttr>): MarkSpec;
 ```
 
 #### `deletion`
@@ -236,7 +309,7 @@ const insertion: MarkSpec;
 Represents content that is marked as deleted, including text and block nodes
 
 ```ts
-const deletion: MarkSpec;
+function deletion(extraAttrs: Record<string, ExtraAttr>): MarkSpec;
 ```
 
 #### `modification`
@@ -245,7 +318,30 @@ Represents nodes whose marks or attrs have changed, but whose content has not
 changed
 
 ```ts
-const modification: MarkSpec;
+function modification(extraAttrs: Record<string, ExtraAttr>): MarkSpec;
+```
+
+#### `blockBoundarySuggestion`
+
+Represents nodes whose marks or attrs have changed, but whose content has not
+changed
+
+```ts
+function blockBoundarySuggestion(
+  extraAttrs: Record<string, ExtraAttr>,
+): MarkSpec;
+```
+
+#### `ExtraAttr`
+
+A spec for a single extra attr to add to the suggestion marks' attr specs
+
+```ts
+interface ExtraAttr {
+  spec: AttributeSpec;
+  toDOM: (value: any) => Record<string, string>;
+  parseDOM: (node: HTMLElement) => unknown;
+}
 ```
 
 #### `addSuggestionMarks`
@@ -417,12 +513,19 @@ document.
 function withSuggestChanges(
   dispatchTransaction?: EditorView["dispatch"],
   generateId?: (schema: Schema, doc?: Node) => SuggestionId,
+  extraAttrs?: () => Attrs,
+  preventJoin?: (a: Attrs, b: Attrs) => boolean,
 ): EditorView["dispatch"];
 ```
 
 `generateId` can be used to customize the unique ids assigned to suggestion
 marks. If undefined, the default implementation (an auto-incrementing integer)
 will be used.
+
+`extraAttrs` can be used to produce the extra attrs for suggestion marks.
+
+`preventJoin` can be used to prevent adjacent suggestions from being joined,
+based on their attributes.
 
 <!-- NOTE: This section is autogenerated. Do not manually edit.-->
 <!--sponsorsstart-->
