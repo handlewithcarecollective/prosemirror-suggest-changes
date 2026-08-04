@@ -47,15 +47,6 @@ export function getSuggestionMarks(schema: Schema): SuggestionMarks {
   return { insertion, deletion, modification, blockBoundarySuggestion };
 }
 
-export function findBlockAncestor($pos: ResolvedPos) {
-  let d = $pos.depth;
-  while (!$pos.node(d).isBlock && d > 0) {
-    d--;
-  }
-
-  return d === 0 ? $pos.pos : $pos.before(d);
-}
-
 export function beforesInBlockRange($pos: ResolvedPos, blockRange: NodeRange) {
   let d = $pos.depth;
   while (!$pos.node(d).isBlock && d > 0) {
