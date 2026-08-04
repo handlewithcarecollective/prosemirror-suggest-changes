@@ -8,11 +8,7 @@ import { type ReplaceStep, type Step } from "prosemirror-transform";
 
 import { findSuggestionMarkEnd } from "./findSuggestionMarkEnd.js";
 import { rebasePos } from "./rebasePos.js";
-import {
-  findBlockAncestor,
-  getSuggestionMarks,
-  beforesInBlockRange,
-} from "./utils.js";
+import { getSuggestionMarks, beforesInBlockRange } from "./utils.js";
 import { type SuggestionId } from "./generateId.js";
 import { type BoundarySuggestion } from "./schema.js";
 
@@ -305,25 +301,37 @@ export function suggestReplaceStep(
     });
 
     const $insertFrom = trackedTransaction.doc.resolve(insertFrom);
+    const $insertedTo = trackedTransaction.doc.resolve(insertedTo);
 
     // Like with deletions, identify when we've inserted a
     // node boundary and add block boundary suggestion marks.
-    if (!$insertFrom.nodeAfter) {
-      const insertFromTextblock = findBlockAncestor($insertFrom);
+    if ($insertFrom.parent !== $insertedTo.parent) {
+      const blockRange = $insertFrom.blockRange($insertedTo);
 
-      const insertFromBlockBoundarySuggestion = blockBoundarySuggestion.isInSet(
-        trackedTransaction.doc.nodeAt(insertFromTextblock)?.marks ?? [],
-      )?.attrs;
+      if (blockRange) {
+        // This insertion may have split the node at any depth.
+        // We add boundary suggestions at every depth of the split
+        // so that we can correctly revert them all back to the
+        // starting point.
+        for (let d = $insertFrom.depth; d > blockRange.depth; d--) {
+          const insertFromTextblock = $insertFrom.before(d);
 
-      trackedTransaction.addNodeMark(
-        insertFromTextblock,
-        blockBoundarySuggestion.create({
-          ...insertFromBlockBoundarySuggestion,
-          id: markId,
-          type: insertion.name,
-          ...extraAttrs,
-        }),
-      );
+          const insertFromBlockBoundarySuggestion =
+            blockBoundarySuggestion.isInSet(
+              trackedTransaction.doc.nodeAt(insertFromTextblock)?.marks ?? [],
+            )?.attrs;
+
+          trackedTransaction.addNodeMark(
+            insertFromTextblock,
+            blockBoundarySuggestion.create({
+              ...insertFromBlockBoundarySuggestion,
+              id: markId,
+              type: insertion.name,
+              ...extraAttrs,
+            }),
+          );
+        }
+      }
     }
 
     if (insertFrom !== $to.pos) {
