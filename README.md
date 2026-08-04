@@ -323,8 +323,8 @@ function modification(extraAttrs: Record<string, ExtraAttr>): MarkSpec;
 
 #### `blockBoundarySuggestion`
 
-Represents nodes whose marks or attrs have changed, but whose content has not
-changed
+Represents suggested block boundary changes (e.g. splitting a paragraph or
+joining two adjacent list items).
 
 ```ts
 function blockBoundarySuggestion(

@@ -155,7 +155,7 @@ export function blockBoundarySuggestion(
           if (!node.dataset["id"]) return false;
 
           return {
-            id: node.dataset["id"] ?? null,
+            id: JSON.parse(node.dataset["id"]) as SuggestionId,
             type: node.dataset["changeType"] ?? null,
             ...extraParseDOM(node),
           };
@@ -167,7 +167,7 @@ export function blockBoundarySuggestion(
           if (!node.dataset["id"]) return false;
 
           return {
-            id: node.dataset["id"] ?? null,
+            id: JSON.parse(node.dataset["id"]) as SuggestionId,
             type: node.dataset["changeType"] ?? null,
             ...extraParseDOM(node),
           };

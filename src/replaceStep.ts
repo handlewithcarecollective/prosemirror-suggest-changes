@@ -107,7 +107,7 @@ export function suggestReplaceStep(
     if (insertion.isInSet(node.marks)) {
       insertedRanges.push({
         from: Math.max(pos, stepFrom),
-        to: Math.min(pos + node.nodeSize, step.to),
+        to: Math.min(pos + node.nodeSize, stepTo),
       });
       return false;
     }

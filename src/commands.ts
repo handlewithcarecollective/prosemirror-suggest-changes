@@ -165,7 +165,7 @@ function revertModifications(node: Node, pos: number, tr: Transform) {
     } else if (mod.attrs["type"] === "mark") {
       if (mod.attrs["previousValue"]) {
         tr.addNodeMark(
-          0,
+          pos,
           node.type.schema.markFromJSON(mod.attrs["previousValue"]),
         );
       } else {

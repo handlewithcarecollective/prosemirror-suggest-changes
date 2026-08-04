@@ -141,7 +141,6 @@ export function transformToSuggestionTransaction(
         suggestionId = suggestionId + 1;
       }
     }
-    continue;
   }
 
   if (originalTransaction.selectionSet && !trackedTransaction.selectionSet) {
