@@ -8,7 +8,7 @@ import { type ReplaceStep, type Step } from "prosemirror-transform";
 
 import { findSuggestionMarkEnd } from "./findSuggestionMarkEnd.js";
 import { rebasePos } from "./rebasePos.js";
-import { getSuggestionMarks, beforesInBlockRange } from "./utils.js";
+import { getSuggestionMarks } from "./utils.js";
 import { type SuggestionId } from "./generateId.js";
 import { type BoundarySuggestion } from "./schema.js";
 
@@ -27,22 +27,13 @@ type WritableAttrs = Record<string, unknown>;
  * Any slices that are to be inserted will also be marked with
  * insertion marks.
  *
- * If a deletion begins at the very end of a textblock, a zero-width
- * space will be inserted at the end of that texblock and given
- * a deletion mark.
- *
- * Similarly, if a deletion ends at the very beginning fo a textblock,
- * a zero-width space will be inserted at the beginning of that
- * textblock and given a deletion mark.
- *
- * If an insertion slice is open on either end, and there is no content
- * adjacent to the open end(s), zero-width spaces
- * will be added at the open end(s) and given insertion marks.
+ * If a deletion or insertion crosses a block boundary, a block
+ * boundary suggestion mark will be added to all but the last
+ * block touched by the change.
  *
  * After all of the above have been evaluated, if the resulting
  * insertion or deletion marks abut or join existing marks, they
- * will be joined and given the same ids. Any no-longer-necessary
- * zero-width spaces will be removed.
+ * will be joined and given the same ids.
  */
 export function suggestReplaceStep(
   trackedTransaction: Transaction,
@@ -128,46 +119,68 @@ export function suggestReplaceStep(
   // can leave zero-width spaces as markers if there's no other
   // content to anchor the deletion to.
   if (stepFrom !== stepTo) {
-    const $stepFrom = trackedTransaction.doc.resolve(stepFrom);
-    const $stepTo = trackedTransaction.doc.resolve(stepTo);
-    const blockRange = $stepFrom.blockRange($stepTo);
-    if (
-      blockRange &&
-      $stepFrom.node(blockRange.depth + 1) !==
-        $stepTo.node(blockRange.depth + 1)
-    ) {
-      const startsToMark = beforesInBlockRange($stepFrom, blockRange);
+    let $stepFrom = trackedTransaction.doc.resolve(stepFrom);
+    let $stepTo = trackedTransaction.doc.resolve(stepTo);
 
-      for (const stepFromBlockStart of startsToMark) {
-        const stepFromBlockBoundarySuggestion = blockBoundarySuggestion.isInSet(
-          trackedTransaction.doc.nodeAt(stepFromBlockStart)?.marks ?? [],
-        )?.attrs as BoundarySuggestion | undefined;
+    if ($stepFrom.parent !== $stepTo.parent) {
+      const blockRange = $stepFrom.blockRange($stepTo);
 
-        // When a deletion crosses a block boundary, we add
-        // a blockBoundarySuggestion mark to the previous
-        // block. This allows us to render the
-        // deleted boundary with a widget, as well as properly handle
-        // future, adjacent deletions and insertions.
-        if (stepFromBlockBoundarySuggestion?.type !== "insertion") {
-          trackedTransaction.addNodeMark(
-            stepFromBlockStart,
-            blockBoundarySuggestion.create({
-              id: markId,
-              type: deletion.name,
-              ...extraAttrs,
-            }),
-          );
-        } else {
-          trackedTransaction.removeNodeMark(
-            stepFromBlockStart,
-            blockBoundarySuggestion,
-          );
+      if (blockRange) {
+        let alreadyDeleted = true;
+        let d = $stepFrom.depth;
+        let minDepth = blockRange.depth;
+        while (d > minDepth) {
+          const stepFromBlockStart = $stepFrom.before(d);
 
-          trackedTransaction.join(
-            stepFromBlockStart +
-              // oxlint-disable-next-line typescript/no-non-null-assertion
-              trackedTransaction.doc.nodeAt(stepFromBlockStart)!.nodeSize,
-          );
+          const stepFromBlockBoundarySuggestion =
+            blockBoundarySuggestion.isInSet(
+              trackedTransaction.doc.nodeAt(stepFromBlockStart)?.marks ?? [],
+            )?.attrs as BoundarySuggestion | undefined;
+
+          // When a deletion crosses a block boundary, we add
+          // a blockBoundarySuggestion mark to the previous
+          // block. This allows us to render the
+          // deleted boundary with a widget, as well as properly handle
+          // future, adjacent deletions and insertions.
+          if (!stepFromBlockBoundarySuggestion) {
+            alreadyDeleted = false;
+            trackedTransaction.addNodeMark(
+              stepFromBlockStart,
+              blockBoundarySuggestion.create({
+                id: markId,
+                type: deletion.name,
+                ...extraAttrs,
+              }),
+            );
+          } else if (stepFromBlockBoundarySuggestion.type === "insertion") {
+            alreadyDeleted = false;
+            trackedTransaction.removeNodeMark(
+              stepFromBlockStart,
+              blockBoundarySuggestion,
+            );
+
+            trackedTransaction.join(
+              stepFromBlockStart +
+                // oxlint-disable-next-line typescript/no-non-null-assertion
+                trackedTransaction.doc.nodeAt(stepFromBlockStart)!.nodeSize,
+            );
+          }
+
+          d--;
+
+          // If a step attempts to delete a block boundary that
+          // has already been deleted, the user wants to delete
+          // the block boundary one level deeper. We expand the
+          // deletion range by one in both directions to match
+          // the appropriate range and loop again.
+          if (d === blockRange.depth && alreadyDeleted) {
+            stepFrom--;
+            stepTo++;
+            $stepFrom = trackedTransaction.doc.resolve(stepFrom);
+            $stepTo = trackedTransaction.doc.resolve(stepTo);
+            minDepth = d;
+            d = $stepFrom.depth;
+          }
         }
       }
     }
